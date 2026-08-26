@@ -558,14 +558,11 @@ function folioOf(r){
 }
 
 /* ---------------- storage layer ---------------- */
-/* Usa el almacenamiento de Claude cuando la app corre dentro de claude.ai;
-   si se abre como archivo local (doble clic / navegador de escritorio) usa
-   automáticamente localStorage del navegador para que igual persista. */
 const LS_PREFIX = 'parteDeObra:';
 function claudeStorageDisponible(){
   return typeof window.storage !== 'undefined' && window.storage && typeof window.storage.set === 'function';
 }
-let MODO_ALMACENAMIENTO = null; // se define en init()
+let MODO_ALMACENAMIENTO = null;
 
 function lsList(prefix){
   const keys = [];
@@ -658,6 +655,61 @@ async function deleteRegistroStorage(id){
   }
 }
 
+/* ---------------- exportación a excel / csv ---------------- */
+function descargarRespaldoExcel() {
+  if (!STATE.registros || !STATE.registros.length) {
+    toast('No hay registros guardados para exportar.');
+    return;
+  }
+
+  const encabezados = [
+    'Folio', 
+    'Fecha', 
+    'Mes', 
+    'Colonia', 
+    'Dirección', 
+    'Referencia', 
+    'Categoría / Tipo', 
+    'Descripción', 
+    'Estado', 
+    'Coordenadas GPS', 
+    'Dirección Geolocalizada'
+  ];
+  
+  const filas = STATE.registros.map(r => {
+    const d = new Date(r.fechaCreacion);
+    const fechaFmt = d.toLocaleDateString('es-MX');
+    const mesFmt = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    const coords = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : 'Sin GPS';
+    
+    return [
+      folioOf(r),
+      fechaFmt,
+      mesFmt,
+      `"${(r.colonia || '').replace(/"/g, '""')}"`,
+      `"${(r.direccion || '').replace(/"/g, '""')}"`,
+      `"${(r.referencia || '').replace(/"/g, '""')}"`,
+      `"${tipoLabel(r).replace(/"/g, '""')}"`,
+      `"${(r.descripcion || '').replace(/"/g, '""')}"`,
+      r.estado,
+      `"${coords}"`,
+      `"${(r.direccionGeo || '').replace(/"/g, '""')}"`
+    ].join(',');
+  });
+
+  const contenidoCSV = '\uFEFF' + [encabezados.join(','), ...filas].join('\n');
+  const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `respaldo_mejoras_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  
+  toast('Respaldo en Excel descargado ✓');
+}
 
 /* ---------------- image compression ---------------- */
 function compressImage(file, maxWidth, quality){
@@ -696,10 +748,6 @@ function captureLocation(){
   });
 }
 
-/* Geocodificación inversa: a partir de lat/lng obtiene la dirección completa
-   (calle, colonia, ciudad, C.P.) usando el servicio abierto de OpenStreetMap
-   (Nominatim). No requiere clave de API. Si falla o no hay internet, se
-   omite sin bloquear el guardado del registro. */
 async function reverseGeocode(lat, lng){
   try{
     const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+lat+'&lon='+lng+'&zoom=18&addressdetails=1';
@@ -713,8 +761,6 @@ async function reverseGeocode(lat, lng){
   }
 }
 
-/* Reconoce coordenadas pegadas como texto plano ("lat, lng") o dentro de un
-   enlace de Google Maps (formatos @lat,lng / q=lat,lng / !3dlat!4dlng). */
 function parseUbicacionTexto(texto){
   if(!texto) return null;
   const patrones = [
@@ -811,7 +857,6 @@ function renderNuevo(){
       '<button type="submit" class="btn btn-primary">' + iconSvg('<path d="M20 6L9 17l-5-5"/>') + 'Guardar registro</button>' +
     '</form>';
 
-  // datalists con datos ya capturados (colonia, direcciones, referencias)
   const colonias = Array.from(new Set(STATE.registros.map(r=>r.colonia))).sort();
   el('listaColonias').innerHTML = colonias.map(c=>'<option value="'+escapeHtml(c)+'">').join('');
   const direcciones = Array.from(new Set(STATE.registros.map(r=>r.direccion).filter(Boolean)));
@@ -819,7 +864,6 @@ function renderNuevo(){
   const referencias = Array.from(new Set(STATE.registros.map(r=>r.referencia).filter(Boolean)));
   el('listaReferencia').innerHTML = referencias.map(d=>'<option value="'+escapeHtml(d)+'">').join('');
 
-  // foto
   el('photoBox').addEventListener('click', ()=> el('fFoto').click());
   el('fFoto').addEventListener('change', async (ev)=>{
     const file = ev.target.files[0];
@@ -842,10 +886,9 @@ function renderNuevo(){
     el('mapLinkExterno').href = 'https://www.google.com/maps?q='+lat+','+lng;
     el('mapPreviewWrap').classList.remove('hidden');
 
-    // busca en segundo plano la dirección completa de esas coordenadas (no bloquea)
     const loteActual = ++STATE.nuevo._geoToken;
     reverseGeocode(lat, lng).then(direccionCompleta => {
-      if(loteActual !== STATE.nuevo._geoToken) return; // el usuario ya cambió de ubicación mientras tanto
+      if(loteActual !== STATE.nuevo._geoToken) return;
       if(direccionCompleta){
         STATE.nuevo.direccionGeo = direccionCompleta;
         const statusEl = el('locStatus');
@@ -857,7 +900,6 @@ function renderNuevo(){
     });
   }
 
-  // gps en tiempo real (cuando sí se está en el sitio)
   el('btnGps').addEventListener('click', async ()=>{
     el('locStatus').textContent = 'Obteniendo ubicación…';
     try{
@@ -868,7 +910,6 @@ function renderNuevo(){
     }
   });
 
-  // ubicación manual (cuando no se está físicamente en el sitio)
   el('btnManualToggle').addEventListener('click', ()=>{
     el('manualLocPanel').classList.toggle('hidden');
   });
@@ -888,7 +929,6 @@ function renderNuevo(){
     toast('Ubicación manual aplicada ✓');
   });
 
-  // categorías (con cuadro extra para "otro")
   document.querySelectorAll('.cat-btn').forEach(b=>{
     b.addEventListener('click', ()=>{
       STATE.nuevo.tipo = b.getAttribute('data-cat');
@@ -899,7 +939,6 @@ function renderNuevo(){
     });
   });
 
-  // submit
   el('formNuevo').addEventListener('submit', async (ev)=>{
     ev.preventDefault();
     if(!STATE.nuevo.tipo){ toast('Selecciona el tipo de mejora.'); return; }
@@ -1077,7 +1116,8 @@ function renderReportes(){
           '</label>';
         }).join('') +
       '</div>' +
-      '<button class="btn btn-primary" id="btnGenerarInforme" type="button" style="margin-top:6px;">' + iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>') + 'Generar informe (PDF)</button>'
+      '<button class="btn btn-primary" id="btnGenerarInforme" type="button" style="margin-top:6px;">' + iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>') + 'Generar informe (PDF)</button>' +
+      '<button class="btn btn-secondary" id="btnExportarExcel" type="button" style="margin-top:10px;">' + iconSvg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>') + 'Descargar respaldo completo (Excel / CSV)</button>'
     ) :
       '<div class="empty-state">'+iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>')+
       '<p>Todavía no hay registros para incluir en un informe.<br>Agrega uno desde la pestaña "Nuevo".</p></div>'
@@ -1105,6 +1145,7 @@ function renderReportes(){
     updateCount();
   });
   el('btnGenerarInforme').addEventListener('click', generarInforme);
+  el('btnExportarExcel').addEventListener('click', descargarRespaldoExcel);
 }
 
 /* ---------------- generación de PDF ---------------- */
@@ -1170,7 +1211,6 @@ async function generarInforme(){
       const blockH = 260;
       if(y + blockH > pageH - margin){ doc.addPage(); y = margin; }
 
-      // stamp folio + estado
       doc.setFont('helvetica','bold'); doc.setFontSize(12);
       doc.text(folioOf(r) + '  ·  ' + r.colonia, margin, y);
       const estadoLabel = (ESTADOS.find(e=>e.id===r.estado)||ESTADOS[0]).label.toUpperCase();
@@ -1189,7 +1229,6 @@ async function generarInforme(){
         doc.setTextColor(20);
       }
 
-      // QR hacia la ubicación (solo si hay coordenadas)
       let qrDataUrl = null;
       const qrW = 52;
       if(r.lat && r.lng){
