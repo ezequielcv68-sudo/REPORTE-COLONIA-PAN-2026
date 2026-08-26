@@ -422,6 +422,46 @@
   @media (min-width:640px){
     #shell{border-left:1px solid var(--line-dark);border-right:1px solid var(--line-dark);}
   }
+
+  /* ---------- Adaptación automática para Tabletas y Laptops ---------- */
+  @media (min-width: 768px) {
+    #shell {
+      max-width: 90% !important;
+      margin: 20px auto !important;
+      border-radius: 12px !important;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
+    }
+    #formNuevo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    #formNuevo .field:nth-child(1),
+    #formNuevo .field:nth-child(2),
+    #formNuevo .field:nth-child(4),
+    #formNuevo .field:nth-child(5),
+    #formNuevo .field:nth-child(6),
+    #formNuevo button[type="submit"] {
+      grid-column: span 2;
+    }
+    #listaRegistros {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    #listaRegistros .ticket {
+      margin-top: 0 !important;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    #shell {
+      max-width: 1180px !important;
+    }
+    #listaRegistros {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
 </style>
 </head>
 <body>
