@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>Parte de Obra — Control de mejoras urbanas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0A2A5E;
+    --bg-panel:#0F3878;
+    --bg-panel-2:#154690;
+    --paper:#FFFFFF;
+    --paper-2:#E7EEFA;
+    --ink:#0A2A5E;
+    --ink-soft:rgba(10,42,94,.62);
+    --ink-faint:rgba(10,42,94,.4);
+    --accent:#2E6FE0;
+    --accent-ink:#0A2A5E;
+    --amber:#B9790A;
+    --green:#2F7A4F;
+    --red:#C23B3B;
+    --line:rgba(10,42,94,.16);
+    --line-dark:rgba(196,209,230,.22);
+    --paper-line:rgba(255,255,255,.9);
+    --silver:#C7D0DE;
+    --radius:4px;
+    --font-display:'Oswald',sans-serif;
+    --font-body:'Work Sans',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--paper);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+  }
+  button{font-family:inherit;}
+  input,select,textarea{font-family:inherit;font-size:15px;}
+  .hidden{display:none !important;}
+  .icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;}
+  .icon-fill{fill:currentColor;stroke:none;}
+
+  /* ---------- shell ---------- */
+  #shell{
+    max-width:560px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:linear-gradient(180deg, #2E6FE0 0%, #123B7A 32%, #0A2A5E 62%, #071F49 100%);
+    position:relative;
+  }
+  header.topbar{
+    padding:16px 18px 14px;
+    background:var(--paper);
+    border-bottom:1px solid #E3E9F4;
+    position:sticky;
+    top:0;
+    z-index:20;
+    box-shadow:0 2px 10px rgba(10,42,94,.12);
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  .brand-mark{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.12em;
+    color:var(--paper);
+    background:linear-gradient(135deg,#4A86EE,#0A2A5E);
+    border:1.5px solid #0A2A5E;
+    padding:2px 7px;
+    border-radius:3px;
+    transform:rotate(-3deg);
+    flex-shrink:0;
+  }
+  .brand h1{
+    font-family:var(--font-display);
+    font-size:20px;
+    font-weight:600;
+    letter-spacing:.02em;
+    margin:0;
+    text-transform:uppercase;
+    color:var(--ink);
+  }
+  .brand-sub{
+    margin:3px 0 0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    font-family:var(--font-mono);
+  }
+
+  main{flex:1;padding:16px 14px 96px;}
+
+  nav.tabs{
+    position:sticky;
+    bottom:0;
+    display:flex;
+    background:var(--paper);
+    border-top:1px solid #E3E9F4;
+    z-index:30;
+    padding-bottom:env(safe-area-inset-bottom,0);
+    box-shadow:0 -2px 10px rgba(10,42,94,.1);
+  }
+  nav.tabs button{
+    flex:1;
+    background:none;
+    border:none;
+    color:var(--ink-faint);
+    padding:11px 4px 9px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+    font-size:11px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    font-family:var(--font-display);
+    font-weight:500;
+    border-top:2px solid transparent;
+    transition:color .15s;
+  }
+  nav.tabs button.active{
+    color:var(--accent);
+    border-top-color:var(--accent);
+  }
+  nav.tabs button .icon{width:21px;height:21px;}
+
+  /* ---------- section heading ---------- */
+  .section-eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    color:#CFE0FF;
+    text-transform:uppercase;
+    margin:4px 0 2px;
+    text-shadow:0 1px 3px rgba(6,20,48,.4);
+  }
+  .section-title{
+    font-family:var(--font-display);
+    font-size:22px;
+    font-weight:600;
+    color:var(--paper);
+    margin:0 0 14px;
+    text-transform:uppercase;
+    letter-spacing:.01em;
+    text-shadow:0 1px 4px rgba(6,20,48,.35);
+  }
+
+  /* ---------- card / paper ticket ---------- */
+  .ticket{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:var(--radius);
+    box-shadow:0 1px 0 rgba(0,0,0,.25), 0 6px 16px rgba(0,0,0,.28);
+    position:relative;
+    overflow:hidden;
+  }
+  .ticket + .ticket{margin-top:12px;}
+  .ticket::before{
+    content:"";
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:4px;
+    background:repeating-linear-gradient(180deg,var(--accent) 0 6px, transparent 6px 12px);
+  }
+
+  /* stamp badge */
+  .stamp{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:10.5px;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    padding:4px 9px;
+    border-radius:20px;
+    border:1.5px dashed currentColor;
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    transform:rotate(-4deg);
+    mix-blend-mode:multiply;
+    white-space:nowrap;
+  }
+  .stamp.pendiente{color:var(--red);}
+  .stamp.en_proceso{color:var(--amber);}
+  .stamp.aplicado{color:var(--green);}
+  .stamp .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+  /* ---------- form ---------- */
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:rgba(247,243,234,.6);
+    margin-bottom:7px;
+    font-family:var(--font-display);
+  }
+  .field input[type=text],
+  .field input[type=date],
+  .field textarea,
+  .field select{
+    width:100%;
+    padding:11px 12px;
+    border-radius:var(--radius);
+    border:1.5px solid var(--line-dark);
+    background:var(--bg-panel);
+    color:var(--paper);
+    outline:none;
+  }
+  .field input::placeholder, .field textarea::placeholder{color:rgba(247,243,234,.32);}
+  .field input:focus, .field textarea:focus, .field select:focus{border-color:var(--accent);}
+  .field textarea{resize:vertical;min-height:74px;}
+  .hint{font-size:12px;color:rgba(247,243,234,.4);margin-top:6px;}
+
+  .cat-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+  }
+  .cat-btn{
+    background:var(--bg-panel);
+    border:1.5px solid var(--line-dark);
+    border-radius:var(--radius);
+    color:rgba(247,243,234,.72);
+    padding:10px 4px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+    font-size:10.5px;
+    text-align:center;
+    line-height:1.2;
+    letter-spacing:.01em;
+  }
+  .cat-btn .icon{width:22px;height:22px;}
+  .cat-btn.active{
+    border-color:var(--accent);
+    color:var(--accent);
+    background:rgba(46,111,224,.12);
+  }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:12px 18px;
+    border-radius:var(--radius);
+    border:1.5px solid transparent;
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:13.5px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    cursor:pointer;
+    width:100%;
+  }
+  .btn .icon{width:18px;height:18px;}
+  .btn-primary{background:var(--accent);color:#FFFFFF;}
+  .btn-primary:active{background:#1E54B8;}
+  .btn-secondary{background:transparent;border-color:var(--line-dark);color:var(--paper);}
+  .btn-secondary:active{background:var(--bg-panel);}
+  .btn-ghost{background:transparent;border:none;color:rgba(247,243,234,.55);text-decoration:underline;padding:8px;font-family:var(--font-body);text-transform:none;letter-spacing:0;font-weight:500;font-size:13px;}
+  .btn-row{display:flex;gap:10px;}
+  .btn-row .btn{width:auto;flex:1;}
+
+  .photo-box{
+    border:1.5px dashed var(--line-dark);
+    border-radius:var(--radius);
+    background:var(--bg-panel);
+    min-height:150px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:8px;
+    color:rgba(247,243,234,.45);
+    cursor:pointer;
+    overflow:hidden;
+    position:relative;
+  }
+  .photo-box img{width:100%;height:210px;object-fit:cover;display:block;}
+  .photo-box .retake{
+    position:absolute;bottom:8px;right:8px;
+    background:rgba(32,30,27,.72);
+    color:var(--paper);
+    font-size:11px;
+    padding:6px 10px;
+    border-radius:20px;
+    font-family:var(--font-display);
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+
+  .loc-box{
+    border:1.5px solid var(--line-dark);
+    border-radius:var(--radius);
+    background:var(--bg-panel);
+    padding:12px;
+  }
+  .loc-status{font-size:13px;color:rgba(247,243,234,.6);margin-bottom:8px;}
+  .loc-coords{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);}
+  .map-preview iframe{display:block;width:100%;}
+  #manualLocPanel{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-dark);}
+
+  /* ---------- ticket card content (registros list) ---------- */
+  .t-body{padding:13px 14px 14px 16px;}
+  .t-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:9px;}
+  .t-colonia{font-family:var(--font-display);font-weight:600;font-size:16px;text-transform:uppercase;letter-spacing:.01em;}
+  .t-folio{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-faint);margin-top:2px;}
+  .t-media{display:flex;gap:10px;}
+  .t-thumb{width:74px;height:74px;border-radius:3px;object-fit:cover;flex-shrink:0;background:var(--paper-2);}
+  .t-thumb-empty{width:74px;height:74px;border-radius:3px;background:var(--paper-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);}
+  .t-info{flex:1;min-width:0;}
+  .t-tipo{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--accent-ink);margin-bottom:3px;}
+  .t-tipo .icon{width:15px;height:15px;}
+  .t-desc{font-size:13px;color:var(--ink-soft);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .t-meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
+  .t-date{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-faint);}
+  .t-actions{display:flex;gap:6px;}
+  .t-actions button{
+    background:none;border:1px solid var(--line);border-radius:20px;
+    padding:5px 10px;font-size:11px;color:var(--ink-soft);cursor:pointer;font-family:var(--font-body);font-weight:600;
+  }
+  .t-actions button.danger{color:var(--red);border-color:rgba(194,59,59,.35);}
+
+  /* ---------- filters ---------- */
+  .filters{margin-bottom:14px;}
+  .search-input{
+    width:100%;padding:10px 12px;border-radius:var(--radius);
+    border:1.5px solid var(--line-dark);background:var(--bg-panel);color:var(--paper);margin-bottom:10px;
+  }
+  .chip-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;}
+  .chip{
+    padding:6px 12px;border-radius:20px;border:1.5px solid var(--line-dark);
+    background:transparent;color:rgba(247,243,234,.6);font-size:12px;cursor:pointer;font-weight:600;
+  }
+  .chip.active{border-color:var(--accent);color:var(--accent);background:rgba(46,111,224,.12);}
+  select.colonia-select{
+    width:100%;padding:10px 12px;border-radius:var(--radius);border:1.5px solid var(--line-dark);
+    background:var(--bg-panel);color:var(--paper);
+  }
+
+  .empty-state{
+    text-align:center;padding:50px 20px;color:rgba(247,243,234,.4);
+  }
+  .empty-state .icon{width:34px;height:34px;margin:0 auto 12px;opacity:.5;}
+  .empty-state p{font-size:14px;line-height:1.5;margin:0;}
+
+  .toast{
+    position:fixed;left:50%;bottom:88px;transform:translateX(-50%);
+    background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:30px;
+    font-size:13.5px;font-weight:600;box-shadow:0 8px 22px rgba(0,0,0,.4);
+    z-index:100;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;
+    max-width:88%;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  /* ---------- reportes ---------- */
+  .report-select-item{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;
+    border:1.5px solid var(--line-dark);border-radius:var(--radius);
+    margin-bottom:8px;background:var(--bg-panel);
+  }
+  .report-select-item input[type=checkbox]{width:19px;height:19px;accent-color:var(--accent);flex-shrink:0;}
+  .report-select-item .rt-thumb{width:40px;height:40px;border-radius:3px;object-fit:cover;flex-shrink:0;background:var(--bg-panel-2);}
+  .report-select-item .rt-info{flex:1;min-width:0;}
+  .report-select-item .rt-colonia{font-size:13px;font-weight:600;}
+  .report-select-item .rt-tipo{font-size:11.5px;color:rgba(247,243,234,.5);}
+
+  .summary-bar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 4px;margin-bottom:10px;font-size:12.5px;color:rgba(247,243,234,.55);
+    font-family:var(--font-mono);
+  }
+  .summary-bar b{color:var(--accent);}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(20,18,16,.72);z-index:200;
+    display:flex;align-items:flex-end;justify-content:center;
+  }
+  .modal-sheet{
+    background:var(--bg-panel);width:100%;max-width:560px;border-radius:14px 14px 0 0;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom,0));max-height:82vh;overflow-y:auto;
+  }
+  .modal-sheet h3{font-family:var(--font-display);text-transform:uppercase;margin:0 0 14px;font-size:17px;}
+  .modal-close{background:none;border:none;color:rgba(247,243,234,.5);float:right;font-size:20px;cursor:pointer;line-height:1;}
+  .share-option{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    background:var(--bg);border:1.5px solid var(--line-dark);border-radius:var(--radius);
+    padding:13px 14px;margin-bottom:10px;color:var(--paper);cursor:pointer;
+  }
+  .share-option .icon{width:22px;height:22px;color:var(--accent);flex-shrink:0;}
+  .share-option .so-title{font-family:var(--font-display);font-size:14px;text-transform:uppercase;letter-spacing:.02em;}
+  .share-option .so-sub{font-size:12px;color:rgba(247,243,234,.5);margin-top:1px;}
+
+  .loader{
+    display:flex;align-items:center;justify-content:center;gap:10px;padding:60px 0;
+    color:rgba(247,243,234,.5);font-size:13.5px;
+  }
+  .spin{width:18px;height:18px;border:2.5px solid rgba(247,243,234,.25);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  @media (min-width:640px){
+    #shell{border-left:1px solid var(--line-dark);border-right:1px solid var(--line-dark);}
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">PDO</span>
+      <h1>Parte de Obra</h1>
+    </div>
+    <p class="brand-sub" id="brandSub">cargando registros…</p>
+  </header>
+
+  <main id="main"></main>
+
+  <nav class="tabs">
+    <button data-tab="nuevo" class="tab-btn active">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nuevo
+    </button>
+    <button data-tab="registros" class="tab-btn">
+      <svg class="icon" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1.5"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+      Registros
+    </button>
+    <button data-tab="reportes" class="tab-btn">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+      Informes
+    </button>
+  </nav>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* =========================================================
+   PARTE DE OBRA — control de mejoras urbanas
+   Almacenamiento: window.storage (personal, no compartido)
+   ========================================================= */
+
+const CATS = [
+  { id:'bacheo', label:'Bacheo', icon:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6" class="icon-fill"/>' },
+  { id:'alumbrado', label:'Alumbrado', icon:'<circle cx="12" cy="9" r="6"/><line x1="9" y1="19" x2="15" y2="19"/><line x1="10" y1="22" x2="14" y2="22"/><line x1="12" y1="15" x2="12" y2="19"/>' },
+  { id:'banquetas', label:'Banquetas', icon:'<rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/>' },
+  { id:'areas_verdes', label:'Áreas verdes', icon:'<path d="M4 20c0-9 6-16 16-16 0 9-6 16-16 16z"/><line x1="4" y1="20" x2="14" y2="10"/>' },
+  { id:'drenaje', label:'Drenaje', icon:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.2" class="icon-fill"/><circle cx="12" cy="8" r="1.2" class="icon-fill"/><circle cx="16" cy="8" r="1.2" class="icon-fill"/><circle cx="8" cy="12" r="1.2" class="icon-fill"/><circle cx="12" cy="12" r="1.2" class="icon-fill"/><circle cx="16" cy="12" r="1.2" class="icon-fill"/><circle cx="8" cy="16" r="1.2" class="icon-fill"/><circle cx="12" cy="16" r="1.2" class="icon-fill"/><circle cx="16" cy="16" r="1.2" class="icon-fill"/>' },
+  { id:'senalizacion', label:'Señales', icon:'<polygon points="12,3 22,20 2,20"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="0.9" class="icon-fill"/>' },
+  { id:'basura', label:'Basura', icon:'<path d="M5 7h14l-1.2 13.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7z"/><line x1="3" y1="7" x2="21" y2="7"/><line x1="9" y1="4" x2="15" y2="4"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' },
+  { id:'otro', label:'Otro', icon:'<circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="17"/><line x1="7" y1="12" x2="17" y2="12"/>' },
+];
+const CAT_MAP = Object.fromEntries(CATS.map(c => [c.id, c]));
+const ESTADOS = [
+  { id:'pendiente', label:'Pendiente' },
+  { id:'en_proceso', label:'En proceso' },
+  { id:'aplicado', label:'Aplicado' },
+];
+
+const STATE = {
+  view:'nuevo',
+  registros:[],
+  loaded:false,
+  nuevo:{ foto:null, lat:null, lng:null, tipo:null },
+  filtroColonia:'',
+  filtroEstado:'',
+};
+
+function el(id){ return document.getElementById(id); }
+function iconSvg(pathInner, extraClass){
+  return '<svg class="icon '+(extraClass||'')+'" viewBox="0 0 24 24">'+pathInner+'</svg>';
+}
+function toast(msg){
+  const t = el('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+}
+function fmtDateTimeShort(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString('es-MX', { day:'2-digit', month:'2-digit', year:'2-digit' }) + ' ' +
+         d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+}
+function folioOf(r){
+  const d = new Date(r.fechaCreacion);
+  const yy = String(d.getFullYear());
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return 'F-'+yy+mm+dd+'-'+r.id.slice(-4).toUpperCase();
+}
+
+/* ---------------- storage layer ---------------- */
+/* Usa el almacenamiento de Claude cuando la app corre dentro de claude.ai;
+   si se abre como archivo local (doble clic / navegador de escritorio) usa
+   automáticamente localStorage del navegador para que igual persista. */
+const LS_PREFIX = 'parteDeObra:';
+function claudeStorageDisponible(){
+  return typeof window.storage !== 'undefined' && window.storage && typeof window.storage.set === 'function';
+}
+let MODO_ALMACENAMIENTO = null; // se define en init()
+
+function lsList(prefix){
+  const keys = [];
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.indexOf(LS_PREFIX) === 0){
+      const bare = k.slice(LS_PREFIX.length);
+      if(!prefix || bare.indexOf(prefix) === 0) keys.push(bare);
+    }
+  }
+  return { keys };
+}
+function lsGet(key){
+  const raw = localStorage.getItem(LS_PREFIX+key);
+  return raw === null ? null : { key, value: raw };
+}
+function lsSet(key, value){
+  localStorage.setItem(LS_PREFIX+key, value);
+  return { key, value };
+}
+function lsDelete(key){
+  localStorage.removeItem(LS_PREFIX+key);
+  return { key, deleted:true };
+}
+
+async function storageList(prefix, shared){
+  if(claudeStorageDisponible()) return await window.storage.list(prefix, shared);
+  return lsList(prefix);
+}
+async function storageGet(key, shared){
+  if(claudeStorageDisponible()) return await window.storage.get(key, shared);
+  return lsGet(key);
+}
+async function storageSet(key, value, shared){
+  if(claudeStorageDisponible()) return await window.storage.set(key, value, shared);
+  return lsSet(key, value);
+}
+async function storageDelete(key, shared){
+  if(claudeStorageDisponible()) return await window.storage.delete(key, shared);
+  return lsDelete(key);
+}
+
+async function loadAllRegistros(){
+  try{
+    const listRes = await storageList('registro:', false);
+    const keys = (listRes && listRes.keys) ? listRes.keys : [];
+    const out = [];
+    for(const k of keys){
+      try{
+        const r = await storageGet(k, false);
+        if(r && r.value){ out.push(JSON.parse(r.value)); }
+      }catch(e){ /* clave ilegible, se omite */ }
+    }
+    out.sort((a,b)=> b.fechaCreacion - a.fechaCreacion);
+    return out;
+  }catch(e){
+    console.error('Error cargando registros', e);
+    toast('No se pudieron cargar los registros guardados.');
+    return [];
+  }
+}
+async function saveRegistro(record){
+  const attempt = async () => {
+    const res = await storageSet('registro:'+record.id, JSON.stringify(record), false);
+    if(!res) throw new Error('El almacenamiento no confirmó el guardado.');
+    return res;
+  };
+  try{
+    await attempt();
+    return { ok:true };
+  }catch(e1){
+    console.error('Error guardando registro (intento 1)', e1);
+    try{
+      await new Promise(r => setTimeout(r, 700));
+      await attempt();
+      return { ok:true };
+    }catch(e2){
+      console.error('Error guardando registro (intento 2)', e2);
+      return { ok:false, error: (e2 && e2.message) ? e2.message : 'error desconocido' };
+    }
+  }
+}
+async function deleteRegistroStorage(id){
+  try{
+    await storageDelete('registro:'+id, false);
+    return true;
+  }catch(e){
+    console.error('Error eliminando registro', e);
+    return false;
+  }
+}
+
+
+/* ---------------- image compression ---------------- */
+function compressImage(file, maxWidth, quality){
+  maxWidth = maxWidth || 1100;
+  quality = quality || 0.68;
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > maxWidth){ h = Math.round(h * (maxWidth / w)); w = maxWidth; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = ()=> reject(new Error('No se pudo procesar la imagen'));
+      img.src = e.target.result;
+    };
+    reader.onerror = ()=> reject(new Error('No se pudo leer el archivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------------- geolocation ---------------- */
+function captureLocation(){
+  return new Promise((resolve, reject)=>{
+    if(!navigator.geolocation){ reject(new Error('Este dispositivo no soporta geolocalización.')); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      err => reject(new Error(err.code === 1 ? 'Se negó el permiso de ubicación.' : 'No se pudo obtener la ubicación.')),
+      { enableHighAccuracy:true, timeout:12000, maximumAge:60000 }
+    );
+  });
+}
+
+/* Reconoce coordenadas pegadas como texto plano ("lat, lng") o dentro de un
+   enlace de Google Maps (formatos @lat,lng / q=lat,lng / !3dlat!4dlng). */
+function parseUbicacionTexto(texto){
+  if(!texto) return null;
+  const patrones = [
+    /!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/,
+    /@(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/,
+    /[?&]q=(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/,
+    /(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/,
+  ];
+  for(const re of patrones){
+    const m = texto.match(re);
+    if(m){
+      const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+      if(!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180){
+        return { lat, lng };
+      }
+    }
+  }
+  return null;
+}
+
+/* ================= RENDER: NUEVO ================= */
+function renderNuevo(){
+  const n = STATE.nuevo;
+  const cats = CATS.map(c => (
+    '<button type="button" class="cat-btn '+(n.tipo===c.id?'active':'')+'" data-cat="'+c.id+'">'+
+      iconSvg(c.icon) + '<span>'+c.label+'</span>' +
+    '</button>'
+  )).join('');
+
+  el('main').innerHTML =
+    '<div class="section-eyebrow">Levantamiento en sitio</div>' +
+    '<h2 class="section-title">Nuevo registro</h2>' +
+    '<form id="formNuevo">' +
+      '<div class="field">' +
+        '<label for="fColonia">Colonia</label>' +
+        '<input type="text" id="fColonia" list="listaColonias" placeholder="Ej. Reforma, Centro…" required autocomplete="off">' +
+        '<datalist id="listaColonias"></datalist>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label for="fCP">Código postal</label>' +
+        '<input type="text" id="fCP" list="listaCP" placeholder="Ej. 74360" inputmode="numeric" maxlength="5" autocomplete="off">' +
+        '<datalist id="listaCP"></datalist>' +
+        '<div class="hint" id="hintCP"></div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label for="fDireccion">Ubicación / referencia</label>' +
+        '<input type="text" id="fDireccion" list="listaDireccion" placeholder="Calle, entre calles, no. exterior…" required autocomplete="off">' +
+        '<datalist id="listaDireccion"></datalist>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label for="fReferencia">Detalle de referencia (opcional)</label>' +
+        '<input type="text" id="fReferencia" list="listaReferencia" placeholder="Ej. frente a poste azul, junto a la tienda…" autocomplete="off">' +
+        '<datalist id="listaReferencia"></datalist>' +
+        '<div class="loc-box" style="margin-top:9px;">' +
+          '<div class="loc-status" id="locStatus">Sin coordenadas GPS capturadas.</div>' +
+          '<div class="btn-row">' +
+            '<button type="button" class="btn btn-secondary" id="btnGps">' + iconSvg('<circle cx="12" cy="10" r="3"/><path d="M12 22s7-7.2 7-12a7 7 0 0 0-14 0c0 4.8 7 12 7 12z"/>') + 'Usar mi ubicación (estoy en el sitio)</button>' +
+          '</div>' +
+          '<button type="button" class="btn-ghost" id="btnManualToggle" style="padding-left:0;">¿No estás en el sitio? Ubicar en el mapa manualmente</button>' +
+          '<div class="hidden" id="manualLocPanel">' +
+            '<div class="btn-row" style="margin-bottom:8px;">' +
+              '<button type="button" class="btn btn-secondary" id="btnAbrirMaps">' + iconSvg('<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>') + 'Buscar en Google Maps ↗</button>' +
+            '</div>' +
+            '<input type="text" id="fMapsInput" placeholder="Pega aquí el enlace de Google Maps, o escribe: lat, lng" autocomplete="off">' +
+            '<button type="button" class="btn btn-primary" id="btnUsarManual" style="margin-top:8px;">' + iconSvg('<path d="M20 6L9 17l-5-5"/>') + 'Usar esta ubicación</button>' +
+            '<div class="hint">Abre Google Maps, busca el lugar, toca el punto y copia el enlace o las coordenadas que aparecen; pégalas aquí.</div>' +
+          '</div>' +
+          '<div class="map-preview hidden" id="mapPreviewWrap">' +
+            '<iframe id="mapPreview" width="100%" height="180" style="border:0;border-radius:3px;margin-top:10px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>' +
+            '<a href="#" target="_blank" rel="noopener" id="mapLinkExterno" class="hint" style="display:block;margin-top:6px;">Abrir en Google Maps ↗</a>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>Tipo de mejora</label>' +
+        '<div class="cat-grid">' + cats + '</div>' +
+        '<div class="hidden" id="otroWrap" style="margin-top:10px;">' +
+          '<input type="text" id="fOtroDesc" placeholder="Especifica la actividad a aplicar…" autocomplete="off">' +
+        '</div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label for="fDesc">Descripción de lo identificado</label>' +
+        '<textarea id="fDesc" placeholder="Qué se detectó y qué se aplicará…" required></textarea>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>Fotografía de evidencia</label>' +
+        '<div class="photo-box" id="photoBox">' +
+          '<svg class="icon" viewBox="0 0 24 24" style="width:30px;height:30px;"><path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></svg>' +
+          '<span>Toca para tomar / subir foto</span>' +
+        '</div>' +
+        '<input type="file" id="fFoto" accept="image/*" capture="environment" class="hidden">' +
+        '<div class="hint">Recomendado para un mejor control, pero puedes guardar el registro sin foto.</div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label>Estado actual</label>' +
+        '<select id="fEstado">' +
+          ESTADOS.map(e => '<option value="'+e.id+'">'+e.label+'</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<button type="submit" class="btn btn-primary">' + iconSvg('<path d="M20 6L9 17l-5-5"/>') + 'Guardar registro</button>' +
+    '</form>';
+
+  // datalists con datos ya capturados (colonia, CP, direcciones, referencias)
+  const colonias = Array.from(new Set(STATE.registros.map(r=>r.colonia))).sort();
+  el('listaColonias').innerHTML = colonias.map(c=>'<option value="'+escapeHtml(c)+'">').join('');
+  const cps = Array.from(new Set(STATE.registros.map(r=>r.cp).filter(Boolean))).sort();
+  el('listaCP').innerHTML = cps.map(c=>'<option value="'+escapeHtml(c)+'">').join('');
+  const direcciones = Array.from(new Set(STATE.registros.map(r=>r.direccion).filter(Boolean)));
+  el('listaDireccion').innerHTML = direcciones.map(d=>'<option value="'+escapeHtml(d)+'">').join('');
+  const referencias = Array.from(new Set(STATE.registros.map(r=>r.referencia).filter(Boolean)));
+  el('listaReferencia').innerHTML = referencias.map(d=>'<option value="'+escapeHtml(d)+'">').join('');
+
+  // al escribir/perder foco la colonia, si ya existe, sugerir su último CP conocido
+  el('fColonia').addEventListener('change', ()=>{
+    const val = el('fColonia').value.trim().toLowerCase();
+    if(!val || el('fCP').value.trim()) return;
+    const previo = STATE.registros.find(r => r.colonia.trim().toLowerCase() === val && r.cp);
+    if(previo){
+      el('hintCP').textContent = 'Sugerencia: en "' + previo.colonia + '" se ha usado el C.P. ' + previo.cp + '.';
+    }else{
+      el('hintCP').textContent = '';
+    }
+  });
+
+  // foto
+  el('photoBox').addEventListener('click', ()=> el('fFoto').click());
+  el('fFoto').addEventListener('change', async (ev)=>{
+    const file = ev.target.files[0];
+    if(!file) return;
+    try{
+      toast('Procesando imagen…');
+      const dataUrl = await compressImage(file);
+      STATE.nuevo.foto = dataUrl;
+      el('photoBox').innerHTML = '<img src="'+dataUrl+'"><span class="retake">Cambiar foto</span>';
+    }catch(e){
+      toast(e.message || 'No se pudo procesar la foto.');
+    }
+  });
+
+  function mostrarUbicacionEnMapa(lat, lng){
+    STATE.nuevo.lat = lat; STATE.nuevo.lng = lng;
+    el('locStatus').innerHTML = 'Ubicación capturada &nbsp; <span class="loc-coords">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</span>';
+    el('mapPreview').src = 'https://www.google.com/maps?q='+lat+','+lng+'&z=17&output=embed';
+    el('mapLinkExterno').href = 'https://www.google.com/maps?q='+lat+','+lng;
+    el('mapPreviewWrap').classList.remove('hidden');
+  }
+
+  // gps en tiempo real (cuando sí se está en el sitio)
+  el('btnGps').addEventListener('click', async ()=>{
+    el('locStatus').textContent = 'Obteniendo ubicación…';
+    try{
+      const loc = await captureLocation();
+      mostrarUbicacionEnMapa(loc.lat, loc.lng);
+    }catch(e){
+      el('locStatus').textContent = e.message;
+    }
+  });
+
+  // ubicación manual (cuando no se está físicamente en el sitio)
+  el('btnManualToggle').addEventListener('click', ()=>{
+    el('manualLocPanel').classList.toggle('hidden');
+  });
+  el('btnAbrirMaps').addEventListener('click', ()=>{
+    const partes = [el('fColonia').value.trim(), el('fDireccion').value.trim(), el('fReferencia').value.trim()].filter(Boolean);
+    const query = partes.length ? partes.join(', ') : 'Atlixco, Puebla';
+    window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(query), '_blank');
+  });
+  el('btnUsarManual').addEventListener('click', ()=>{
+    const texto = el('fMapsInput').value.trim();
+    const coords = parseUbicacionTexto(texto);
+    if(!coords){
+      toast('No se reconocieron coordenadas. Pega el enlace completo de Google Maps o escribe: lat, lng');
+      return;
+    }
+    mostrarUbicacionEnMapa(coords.lat, coords.lng);
+    toast('Ubicación manual aplicada ✓');
+  });
+
+  // categorías (con cuadro extra para "otro")
+  document.querySelectorAll('.cat-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      STATE.nuevo.tipo = b.getAttribute('data-cat');
+      document.querySelectorAll('.cat-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      el('otroWrap').classList.toggle('hidden', STATE.nuevo.tipo !== 'otro');
+      if(STATE.nuevo.tipo === 'otro') el('fOtroDesc').focus();
+    });
+  });
+
+  // submit
+  el('formNuevo').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    if(!STATE.nuevo.tipo){ toast('Selecciona el tipo de mejora.'); return; }
+    const colonia = el('fColonia').value.trim();
+    const cp = el('fCP').value.trim();
+    const direccion = el('fDireccion').value.trim();
+    const referencia = el('fReferencia').value.trim();
+    const descripcion = el('fDesc').value.trim();
+    const estado = el('fEstado').value;
+    const tipoOtro = el('fOtroDesc') ? el('fOtroDesc').value.trim() : '';
+    if(!colonia || !direccion || !descripcion){ toast('Completa colonia, ubicación y descripción.'); return; }
+
+    const record = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+      colonia, cp, direccion, referencia, descripcion, estado,
+      tipo: STATE.nuevo.tipo,
+      tipoOtro: STATE.nuevo.tipo === 'otro' ? tipoOtro : '',
+      foto: STATE.nuevo.foto || null,
+      lat: STATE.nuevo.lat, lng: STATE.nuevo.lng,
+      fechaCreacion: Date.now(),
+    };
+
+    const submitBtn = ev.target.querySelector('button[type=submit]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando…';
+    const result = await saveRegistro(record);
+    submitBtn.disabled = false;
+
+    if(result.ok){
+      STATE.registros.unshift(record);
+      STATE.nuevo = { foto:null, lat:null, lng:null, tipo:null };
+      const faltantes = [];
+      if(!record.foto) faltantes.push('foto');
+      if(!record.cp) faltantes.push('código postal');
+      if(!record.lat) faltantes.push('ubicación GPS');
+      toast(faltantes.length
+        ? 'Registro guardado ✓ — para mejor control, la próxima vez agrega: ' + faltantes.join(', ') + '.'
+        : 'Registro guardado ✓');
+      renderNuevo();
+    }else{
+      toast('No se pudo guardar (' + result.error + '). Tus datos siguen en el formulario, intenta de nuevo.');
+      submitBtn.innerHTML = iconSvg('<path d="M20 6L9 17l-5-5"/>') + 'Guardar registro';
+    }
+  });
+}
+
+/* ================= RENDER: REGISTROS ================= */
+function tipoLabel(r){
+  const cat = CAT_MAP[r.tipo] || CAT_MAP.otro;
+  if(r.tipo === 'otro' && r.tipoOtro) return cat.label + ': ' + r.tipoOtro;
+  return cat.label;
+}
+function registroCardHtml(r){
+  const cat = CAT_MAP[r.tipo] || CAT_MAP.otro;
+  const estadoLabel = (ESTADOS.find(e=>e.id===r.estado) || ESTADOS[0]).label;
+  const searchBlob = (r.colonia+' '+(r.cp||'')+' '+r.direccion+' '+r.descripcion+' '+tipoLabel(r)).toLowerCase();
+  return (
+    '<div class="ticket" data-id="'+r.id+'" data-colonia="'+escapeHtml(r.colonia)+'" data-estado="'+r.estado+'" data-search="'+escapeHtml(searchBlob)+'">' +
+      '<div class="t-body">' +
+        '<div class="t-top">' +
+          '<div><div class="t-colonia">'+escapeHtml(r.colonia)+(r.cp?' <span style="font-weight:400;color:var(--ink-faint);">· C.P. '+escapeHtml(r.cp)+'</span>':'')+'</div><div class="t-folio">'+folioOf(r)+'</div></div>' +
+          '<div class="stamp '+r.estado+'"><span class="dot"></span>'+estadoLabel+'</div>' +
+        '</div>' +
+        '<div class="t-media">' +
+          (r.foto ? '<img class="t-thumb" src="'+r.foto+'">' : '<div class="t-thumb-empty">'+iconSvg('<path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>')+'</div>') +
+          '<div class="t-info">' +
+            '<div class="t-tipo">' + iconSvg(cat.icon) + escapeHtml(tipoLabel(r)) + '</div>' +
+            '<div class="t-desc">'+escapeHtml(r.descripcion)+(r.referencia?' <span style="color:var(--ink-faint);">— '+escapeHtml(r.referencia)+'</span>':'')+'</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="t-meta">' +
+          '<span class="t-date">'+fmtDateTimeShort(r.fechaCreacion)+'</span>' +
+          '<div class="t-actions">' +
+            '<button data-act="ciclo" data-id="'+r.id+'">Cambiar estado</button>' +
+            '<button data-act="borrar" data-id="'+r.id+'" class="danger">Eliminar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function renderRegistros(){
+  const colonias = Array.from(new Set(STATE.registros.map(r=>r.colonia))).sort();
+  el('main').innerHTML =
+    '<div class="section-eyebrow">Bitácora</div>' +
+    '<h2 class="section-title">Registros</h2>' +
+    '<div class="filters">' +
+      '<input type="text" class="search-input" id="buscador" placeholder="Buscar por colonia, calle o descripción…">' +
+      '<select class="colonia-select" id="selColonia"><option value="">Todas las colonias</option>' +
+        colonias.map(c=>'<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>').join('') +
+      '</select>' +
+      '<div class="chip-row" id="chipsEstado" style="margin-top:9px;">' +
+        '<button class="chip active" data-estado="">Todos</button>' +
+        ESTADOS.map(e=>'<button class="chip" data-estado="'+e.id+'">'+e.label+'</button>').join('') +
+      '</div>' +
+    '</div>' +
+    '<div id="listaRegistros">' +
+      (STATE.registros.length ? STATE.registros.map(registroCardHtml).join('') :
+        '<div class="empty-state">'+iconSvg('<rect x="4" y="3" width="16" height="18" rx="1.5"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/>')+
+        '<p>Aún no hay registros.<br>Documenta tu primera mejora desde la pestaña "Nuevo".</p></div>') +
+    '</div>';
+
+  if(!STATE.registros.length) return;
+
+  el('buscador').addEventListener('input', aplicarFiltrosRegistros);
+  el('selColonia').addEventListener('change', ()=>{ STATE.filtroColonia = el('selColonia').value; aplicarFiltrosRegistros(); });
+  document.querySelectorAll('#chipsEstado .chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      document.querySelectorAll('#chipsEstado .chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      STATE.filtroEstado = chip.getAttribute('data-estado');
+      aplicarFiltrosRegistros();
+    });
+  });
+
+  document.querySelectorAll('[data-act="ciclo"]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const id = b.getAttribute('data-id');
+      const r = STATE.registros.find(x=>x.id===id);
+      if(!r) return;
+      const order = ['pendiente','en_proceso','aplicado'];
+      r.estado = order[(order.indexOf(r.estado)+1) % order.length];
+      const result = await saveRegistro(r);
+      if(result.ok){ toast('Estado actualizado ✓'); renderRegistros(); }
+      else toast('No se pudo actualizar el estado (' + result.error + ').');
+    });
+  });
+  document.querySelectorAll('[data-act="borrar"]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const id = b.getAttribute('data-id');
+      if(!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
+      const ok = await deleteRegistroStorage(id);
+      if(ok){
+        STATE.registros = STATE.registros.filter(x=>x.id!==id);
+        toast('Registro eliminado');
+        renderRegistros();
+      }else toast('No se pudo eliminar.');
+    });
+  });
+}
+
+function aplicarFiltrosRegistros(){
+  const texto = (el('buscador').value||'').toLowerCase().trim();
+  const colonia = STATE.filtroColonia;
+  const estado = STATE.filtroEstado;
+  document.querySelectorAll('#listaRegistros .ticket').forEach(card=>{
+    const okTexto = !texto || card.getAttribute('data-search').includes(texto);
+    const okColonia = !colonia || card.getAttribute('data-colonia') === colonia;
+    const okEstado = !estado || card.getAttribute('data-estado') === estado;
+    card.classList.toggle('hidden', !(okTexto && okColonia && okEstado));
+  });
+}
+
+/* ================= RENDER: REPORTES ================= */
+function renderReportes(){
+  const colonias = Array.from(new Set(STATE.registros.map(r=>r.colonia))).sort();
+  el('main').innerHTML =
+    '<div class="section-eyebrow">Entrega a jefatura</div>' +
+    '<h2 class="section-title">Generar informe</h2>' +
+    (STATE.registros.length ?
+    (
+      '<div class="filters">' +
+        '<select class="colonia-select" id="repColonia"><option value="">Selecciona registros manualmente ↓</option>' +
+          colonias.map(c=>'<option value="'+escapeHtml(c)+'">Seleccionar toda la colonia: '+escapeHtml(c)+'</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="summary-bar"><span id="repCount"><b>0</b> registros seleccionados</span><button class="btn-ghost" id="repLimpiar" type="button">Limpiar selección</button></div>' +
+      '<div id="repLista">' +
+        STATE.registros.map(r=>{
+          const cat = CAT_MAP[r.tipo] || CAT_MAP.otro;
+          return '<label class="report-select-item" data-colonia="'+escapeHtml(r.colonia)+'">' +
+            '<input type="checkbox" class="chk-reporte" value="'+r.id+'">' +
+            (r.foto ? '<img class="rt-thumb" src="'+r.foto+'">' : '<div class="rt-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--ink-faint);">'+iconSvg(cat.icon)+'</div>') +
+            '<div class="rt-info"><div class="rt-colonia">'+escapeHtml(r.colonia)+(r.cp?' · '+escapeHtml(r.cp):'')+'</div><div class="rt-tipo">'+escapeHtml(tipoLabel(r))+' · '+fmtDate(r.fechaCreacion)+'</div></div>' +
+          '</label>';
+        }).join('') +
+      '</div>' +
+      '<button class="btn btn-primary" id="btnGenerarInforme" type="button" style="margin-top:6px;">' + iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>') + 'Generar informe (PDF)</button>'
+    ) :
+      '<div class="empty-state">'+iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>')+
+      '<p>Todavía no hay registros para incluir en un informe.<br>Agrega uno desde la pestaña "Nuevo".</p></div>'
+    );
+
+  if(!STATE.registros.length) return;
+
+  function updateCount(){
+    const n = document.querySelectorAll('.chk-reporte:checked').length;
+    el('repCount').innerHTML = '<b>'+n+'</b> registro'+(n===1?'':'s')+' seleccionado'+(n===1?'':'s');
+  }
+  document.querySelectorAll('.chk-reporte').forEach(chk=> chk.addEventListener('change', updateCount));
+  el('repColonia').addEventListener('change', ()=>{
+    const val = el('repColonia').value;
+    if(!val) return;
+    document.querySelectorAll('.report-select-item').forEach(item=>{
+      const chk = item.querySelector('.chk-reporte');
+      chk.checked = (item.getAttribute('data-colonia') === val);
+    });
+    updateCount();
+  });
+  el('repLimpiar').addEventListener('click', ()=>{
+    document.querySelectorAll('.chk-reporte').forEach(c=>c.checked=false);
+    el('repColonia').value='';
+    updateCount();
+  });
+  el('btnGenerarInforme').addEventListener('click', generarInforme);
+}
+
+/* ---------------- generación de PDF ---------------- */
+function generarQR(texto, size){
+  return new Promise((resolve)=>{
+    if(typeof QRCode === 'undefined'){ resolve(null); return; }
+    const holder = document.createElement('div');
+    holder.style.position = 'fixed';
+    holder.style.left = '-9999px';
+    document.body.appendChild(holder);
+    try{
+      new QRCode(holder, { text: texto, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+      setTimeout(()=>{
+        let dataUrl = null;
+        const canvas = holder.querySelector('canvas');
+        const img = holder.querySelector('img');
+        try{
+          if(canvas) dataUrl = canvas.toDataURL('image/png');
+          else if(img && img.src) dataUrl = img.src;
+        }catch(e){ dataUrl = null; }
+        document.body.removeChild(holder);
+        resolve(dataUrl);
+      }, 60);
+    }catch(e){
+      document.body.removeChild(holder);
+      resolve(null);
+    }
+  });
+}
+
+async function generarInforme(){
+  const ids = Array.from(document.querySelectorAll('.chk-reporte:checked')).map(c=>c.value);
+  if(!ids.length){ toast('Selecciona al menos un registro.'); return; }
+  const seleccion = STATE.registros.filter(r=> ids.includes(r.id));
+
+  const btn = el('btnGenerarInforme');
+  btn.disabled = true;
+  btn.textContent = 'Generando PDF…';
+
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 42;
+    let y = margin;
+
+    const coloniasSet = Array.from(new Set(seleccion.map(r=>r.colonia)));
+    const titulo = coloniasSet.length === 1 ? coloniasSet[0] : coloniasSet.length + ' colonias';
+    const fechaHoy = new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' });
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(17);
+    doc.text('INFORME DE MEJORAS URBANAS', margin, y); y += 20;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(90);
+    doc.text('Colonia(s): ' + titulo, margin, y); y += 14;
+    doc.text('Fecha de entrega: ' + fechaHoy + '   ·   Registros incluidos: ' + seleccion.length, margin, y); y += 10;
+    doc.setDrawColor(210); doc.line(margin, y+8, pageW-margin, y+8); y += 26;
+    doc.setTextColor(20);
+
+    for(let i=0;i<seleccion.length;i++){
+      const r = seleccion[i];
+      const cat = CAT_MAP[r.tipo] || CAT_MAP.otro;
+      const blockH = 218;
+      if(y + blockH > pageH - margin){ doc.addPage(); y = margin; }
+
+      // stamp folio + estado
+      doc.setFont('helvetica','bold'); doc.setFontSize(12);
+      doc.text(folioOf(r) + '  ·  ' + r.colonia + (r.cp ? ' (C.P. ' + r.cp + ')' : ''), margin, y);
+      const estadoLabel = (ESTADOS.find(e=>e.id===r.estado)||ESTADOS[0]).label.toUpperCase();
+      doc.setFontSize(9.5);
+      doc.text('[' + estadoLabel + ']', pageW - margin - doc.getTextWidth('[' + estadoLabel + ']'), y);
+      y += 16;
+
+      const imgX = margin, imgW = 150, imgH = 112;
+      if(r.foto){
+        try{ doc.addImage(r.foto, 'JPEG', imgX, y, imgW, imgH); }
+        catch(e){ doc.setDrawColor(200); doc.rect(imgX, y, imgW, imgH); }
+      }else{
+        doc.setDrawColor(200); doc.rect(imgX, y, imgW, imgH);
+        doc.setFontSize(9); doc.setTextColor(160);
+        doc.text('Sin fotografía', imgX+10, y+imgH/2);
+        doc.setTextColor(20);
+      }
+
+      // QR hacia la ubicación (solo si hay coordenadas)
+      let qrDataUrl = null;
+      const qrW = 52;
+      if(r.lat && r.lng){
+        qrDataUrl = await generarQR('https://www.google.com/maps?q='+r.lat+','+r.lng, 180);
+      }
+      const hasQR = !!qrDataUrl;
+      if(hasQR){
+        const qrX = pageW - margin - qrW;
+        doc.addImage(qrDataUrl, 'PNG', qrX, y, qrW, qrW);
+        doc.setFontSize(7); doc.setTextColor(110);
+        doc.text('Ver ubicación', qrX + qrW/2, y + qrW + 9, { align:'center' });
+        doc.setTextColor(20);
+      }
+
+      const textX = imgX + imgW + 16;
+      const textW = pageW - margin - textX - (hasQR ? qrW + 12 : 0);
+      let ty = y + 4;
+      doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+      const tipoLines = doc.splitTextToSize('Tipo de mejora: ' + tipoLabel(r), textW);
+      doc.text(tipoLines, textX, ty); ty += tipoLines.length * 13 + 2;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      const dirLines = doc.splitTextToSize('Ubicación: ' + r.direccion, textW);
+      doc.text(dirLines, textX, ty); ty += dirLines.length * 12 + 3;
+      if(r.referencia){
+        const refLines = doc.splitTextToSize('Referencia: ' + r.referencia, textW);
+        doc.text(refLines, textX, ty); ty += refLines.length * 12 + 3;
+      }
+      if(r.lat && r.lng){
+        doc.setTextColor(90);
+        doc.text('Coordenadas: ' + r.lat.toFixed(5) + ', ' + r.lng.toFixed(5), textX, ty);
+        doc.setTextColor(20);
+        ty += 13;
+      }
+      const descLines = doc.splitTextToSize('Descripción: ' + r.descripcion, textW);
+      doc.text(descLines, textX, ty); ty += descLines.length * 12 + 3;
+      doc.setTextColor(120); doc.setFontSize(9);
+      doc.text('Registrado: ' + fmtDateTimeShort(r.fechaCreacion), textX, ty);
+      doc.setTextColor(20);
+
+      y += Math.max(imgH, hasQR ? qrW + 20 : 0) + 22;
+      doc.setDrawColor(230); doc.line(margin, y-10, pageW-margin, y-10);
+    }
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for(let p=1;p<=pageCount;p++){
+      doc.setPage(p);
+      doc.setFontSize(8.5); doc.setTextColor(150);
+      doc.text('Parte de Obra · pág. ' + p + '/' + pageCount, margin, pageH - 20);
+    }
+
+    const filenameSafe = titulo.replace(/[^a-z0-9]+/gi,'_').toLowerCase();
+    const filename = 'informe_' + filenameSafe + '_' + new Date().toISOString().slice(0,10) + '.pdf';
+    const blob = doc.output('blob');
+
+    mostrarModalCompartir(blob, filename, seleccion, titulo);
+  }catch(e){
+    console.error(e);
+    toast('No se pudo generar el PDF: ' + e.message);
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>') + 'Generar informe (PDF)';
+  }
+}
+
+function mostrarModalCompartir(blob, filename, seleccion, titulo){
+  const resumenTexto = 'Informe de mejoras urbanas — ' + titulo + '\n' +
+    seleccion.length + ' registro(s) · ' + new Date().toLocaleDateString('es-MX') + '\n' +
+    seleccion.slice(0,6).map(r=>'• ' + (CAT_MAP[r.tipo]||CAT_MAP.otro).label + ' en ' + r.colonia + ' (' + r.direccion + ')').join('\n') +
+    (seleccion.length>6 ? '\n… y ' + (seleccion.length-6) + ' más.' : '') +
+    '\n\nInforme completo adjunto en PDF.';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML =
+    '<div class="modal-sheet">' +
+      '<button class="modal-close" id="mClose">&times;</button>' +
+      '<h3>Informe listo</h3>' +
+      '<p style="font-size:13px;color:rgba(247,243,234,.6);margin-top:-6px;">'+seleccion.length+' registro(s) · '+escapeHtml(titulo)+'</p>' +
+      '<button class="share-option" id="mShare">' +
+        iconSvg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/>') +
+        '<div><div class="so-title">Compartir directo</div><div class="so-sub">WhatsApp, correo o cualquier app — envía el PDF</div></div>' +
+      '</button>' +
+      '<button class="share-option" id="mDownload">' +
+        iconSvg('<path d="M12 3v13"/><polyline points="7,11 12,16 17,11"/><line x1="4" y1="20" x2="20" y2="20"/>') +
+        '<div><div class="so-title">Descargar PDF</div><div class="so-sub">Guárdalo para adjuntarlo manualmente</div></div>' +
+      '</button>' +
+      '<button class="share-option" id="mWhats">' +
+        iconSvg('<path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 10.5c.3 2.6 2.4 4.7 5 5"/>') +
+        '<div><div class="so-title">Abrir WhatsApp</div><div class="so-sub">Envía el resumen por texto; adjunta el PDF descargado</div></div>' +
+      '</button>' +
+      '<button class="share-option" id="mMail">' +
+        iconSvg('<rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3,7 12,13 21,7"/>') +
+        '<div><div class="so-title">Abrir correo</div><div class="so-sub">Redacta el resumen; adjunta el PDF descargado</div></div>' +
+      '</button>' +
+      '<p class="hint" style="margin-top:6px;">El navegador no permite adjuntar archivos automáticamente a WhatsApp o correo. "Compartir directo" es la forma más rápida cuando tu dispositivo lo soporta; si no, descarga el PDF y adjúntalo tú misma.</p>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  el('mClose').addEventListener('click', ()=> overlay.remove());
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.remove(); });
+
+  el('mShare').addEventListener('click', async ()=>{
+    try{
+      const file = new File([blob], filename, { type:'application/pdf' });
+      if(navigator.canShare && navigator.canShare({ files:[file] })){
+        await navigator.share({ files:[file], title:'Informe de mejoras urbanas', text: resumenTexto });
+        overlay.remove();
+      }else{
+        toast('Este dispositivo no soporta compartir archivos. Descarga el PDF.');
+      }
+    }catch(e){
+      if(e.name !== 'AbortError') toast('No se pudo compartir el archivo.');
+    }
+  });
+
+  el('mDownload').addEventListener('click', ()=>{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    toast('PDF descargado ✓');
+  });
+
+  el('mWhats').addEventListener('click', ()=>{
+    const url = 'https://wa.me/?text=' + encodeURIComponent(resumenTexto);
+    window.open(url, '_blank');
+  });
+
+  el('mMail').addEventListener('click', ()=>{
+    const subject = 'Informe de mejoras urbanas — ' + titulo;
+    const url = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(resumenTexto);
+    window.location.href = url;
+  });
+}
+
+/* ================= NAV / INIT ================= */
+function setTab(tab){
+  STATE.view = tab;
+  document.querySelectorAll('.tab-btn').forEach(b=> b.classList.toggle('active', b.getAttribute('data-tab')===tab));
+  if(tab==='nuevo') renderNuevo();
+  else if(tab==='registros') renderRegistros();
+  else if(tab==='reportes') renderReportes();
+}
+
+document.querySelectorAll('.tab-btn').forEach(b=>{
+  b.addEventListener('click', ()=> setTab(b.getAttribute('data-tab')));
+});
+
+async function init(){
+  el('main').innerHTML = '<div class="loader"><span class="spin"></span> Cargando registros…</div>';
+  MODO_ALMACENAMIENTO = claudeStorageDisponible() ? 'claude' : 'local';
+  STATE.registros = await loadAllRegistros();
+  STATE.loaded = true;
+  const nColonias = new Set(STATE.registros.map(r=>r.colonia)).size;
+  const modoTxt = MODO_ALMACENAMIENTO === 'local' ? ' · guardado en este navegador' : '';
+  el('brandSub').textContent = (STATE.registros.length
+    ? STATE.registros.length + ' registro(s) · ' + nColonias + ' colonia(s)'
+    : 'sin registros aún — comienza por "Nuevo"') + modoTxt;
+  setTab('nuevo');
+}
+init();
+</script>
+</body>
+</html>
