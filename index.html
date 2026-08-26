@@ -481,7 +481,7 @@ const STATE = {
   view:'nuevo',
   registros:[],
   loaded:false,
-  nuevo:{ foto:null, lat:null, lng:null, tipo:null },
+  nuevo:{ foto:null, lat:null, lng:null, tipo:null, direccionGeo:null, _geoToken:0 },
   filtroColonia:'',
   filtroEstado:'',
 };
@@ -656,6 +656,23 @@ function captureLocation(){
   });
 }
 
+/* Geocodificación inversa: a partir de lat/lng obtiene la dirección completa
+   (calle, colonia, ciudad, C.P.) usando el servicio abierto de OpenStreetMap
+   (Nominatim). No requiere clave de API. Si falla o no hay internet, se
+   omite sin bloquear el guardado del registro. */
+async function reverseGeocode(lat, lng){
+  try{
+    const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+lat+'&lon='+lng+'&zoom=18&addressdetails=1';
+    const res = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+    if(!res.ok) return null;
+    const data = await res.json();
+    return (data && data.display_name) ? data.display_name : null;
+  }catch(e){
+    console.error('Error en geocodificación inversa', e);
+    return null;
+  }
+}
+
 /* Reconoce coordenadas pegadas como texto plano ("lat, lng") o dentro de un
    enlace de Google Maps (formatos @lat,lng / q=lat,lng / !3dlat!4dlng). */
 function parseUbicacionTexto(texto){
@@ -695,12 +712,6 @@ function renderNuevo(){
         '<label for="fColonia">Colonia</label>' +
         '<input type="text" id="fColonia" list="listaColonias" placeholder="Ej. Reforma, Centro…" required autocomplete="off">' +
         '<datalist id="listaColonias"></datalist>' +
-      '</div>' +
-      '<div class="field">' +
-        '<label for="fCP">Código postal</label>' +
-        '<input type="text" id="fCP" list="listaCP" placeholder="Ej. 74360" inputmode="numeric" maxlength="5" autocomplete="off">' +
-        '<datalist id="listaCP"></datalist>' +
-        '<div class="hint" id="hintCP"></div>' +
       '</div>' +
       '<div class="field">' +
         '<label for="fDireccion">Ubicación / referencia</label>' +
@@ -760,27 +771,13 @@ function renderNuevo(){
       '<button type="submit" class="btn btn-primary">' + iconSvg('<path d="M20 6L9 17l-5-5"/>') + 'Guardar registro</button>' +
     '</form>';
 
-  // datalists con datos ya capturados (colonia, CP, direcciones, referencias)
+  // datalists con datos ya capturados (colonia, direcciones, referencias)
   const colonias = Array.from(new Set(STATE.registros.map(r=>r.colonia))).sort();
   el('listaColonias').innerHTML = colonias.map(c=>'<option value="'+escapeHtml(c)+'">').join('');
-  const cps = Array.from(new Set(STATE.registros.map(r=>r.cp).filter(Boolean))).sort();
-  el('listaCP').innerHTML = cps.map(c=>'<option value="'+escapeHtml(c)+'">').join('');
   const direcciones = Array.from(new Set(STATE.registros.map(r=>r.direccion).filter(Boolean)));
   el('listaDireccion').innerHTML = direcciones.map(d=>'<option value="'+escapeHtml(d)+'">').join('');
   const referencias = Array.from(new Set(STATE.registros.map(r=>r.referencia).filter(Boolean)));
   el('listaReferencia').innerHTML = referencias.map(d=>'<option value="'+escapeHtml(d)+'">').join('');
-
-  // al escribir/perder foco la colonia, si ya existe, sugerir su último CP conocido
-  el('fColonia').addEventListener('change', ()=>{
-    const val = el('fColonia').value.trim().toLowerCase();
-    if(!val || el('fCP').value.trim()) return;
-    const previo = STATE.registros.find(r => r.colonia.trim().toLowerCase() === val && r.cp);
-    if(previo){
-      el('hintCP').textContent = 'Sugerencia: en "' + previo.colonia + '" se ha usado el C.P. ' + previo.cp + '.';
-    }else{
-      el('hintCP').textContent = '';
-    }
-  });
 
   // foto
   el('photoBox').addEventListener('click', ()=> el('fFoto').click());
@@ -799,10 +796,25 @@ function renderNuevo(){
 
   function mostrarUbicacionEnMapa(lat, lng){
     STATE.nuevo.lat = lat; STATE.nuevo.lng = lng;
+    STATE.nuevo.direccionGeo = null;
     el('locStatus').innerHTML = 'Ubicación capturada &nbsp; <span class="loc-coords">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</span>';
     el('mapPreview').src = 'https://www.google.com/maps?q='+lat+','+lng+'&z=17&output=embed';
     el('mapLinkExterno').href = 'https://www.google.com/maps?q='+lat+','+lng;
     el('mapPreviewWrap').classList.remove('hidden');
+
+    // busca en segundo plano la dirección completa de esas coordenadas (no bloquea)
+    const loteActual = ++STATE.nuevo._geoToken;
+    reverseGeocode(lat, lng).then(direccionCompleta => {
+      if(loteActual !== STATE.nuevo._geoToken) return; // el usuario ya cambió de ubicación mientras tanto
+      if(direccionCompleta){
+        STATE.nuevo.direccionGeo = direccionCompleta;
+        const statusEl = el('locStatus');
+        if(statusEl){
+          statusEl.innerHTML = 'Ubicación capturada &nbsp; <span class="loc-coords">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</span>' +
+            '<div class="hint" style="margin-top:6px;">Dirección detectada: '+escapeHtml(direccionCompleta)+'</div>';
+        }
+      }
+    });
   }
 
   // gps en tiempo real (cuando sí se está en el sitio)
@@ -852,7 +864,6 @@ function renderNuevo(){
     ev.preventDefault();
     if(!STATE.nuevo.tipo){ toast('Selecciona el tipo de mejora.'); return; }
     const colonia = el('fColonia').value.trim();
-    const cp = el('fCP').value.trim();
     const direccion = el('fDireccion').value.trim();
     const referencia = el('fReferencia').value.trim();
     const descripcion = el('fDesc').value.trim();
@@ -862,11 +873,12 @@ function renderNuevo(){
 
     const record = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-      colonia, cp, direccion, referencia, descripcion, estado,
+      colonia, direccion, referencia, descripcion, estado,
       tipo: STATE.nuevo.tipo,
       tipoOtro: STATE.nuevo.tipo === 'otro' ? tipoOtro : '',
       foto: STATE.nuevo.foto || null,
       lat: STATE.nuevo.lat, lng: STATE.nuevo.lng,
+      direccionGeo: STATE.nuevo.direccionGeo || null,
       fechaCreacion: Date.now(),
     };
 
@@ -878,10 +890,9 @@ function renderNuevo(){
 
     if(result.ok){
       STATE.registros.unshift(record);
-      STATE.nuevo = { foto:null, lat:null, lng:null, tipo:null };
+      STATE.nuevo = { foto:null, lat:null, lng:null, tipo:null, direccionGeo:null, _geoToken:0 };
       const faltantes = [];
       if(!record.foto) faltantes.push('foto');
-      if(!record.cp) faltantes.push('código postal');
       if(!record.lat) faltantes.push('ubicación GPS');
       toast(faltantes.length
         ? 'Registro guardado ✓ — para mejor control, la próxima vez agrega: ' + faltantes.join(', ') + '.'
@@ -903,12 +914,12 @@ function tipoLabel(r){
 function registroCardHtml(r){
   const cat = CAT_MAP[r.tipo] || CAT_MAP.otro;
   const estadoLabel = (ESTADOS.find(e=>e.id===r.estado) || ESTADOS[0]).label;
-  const searchBlob = (r.colonia+' '+(r.cp||'')+' '+r.direccion+' '+r.descripcion+' '+tipoLabel(r)).toLowerCase();
+  const searchBlob = (r.colonia+' '+r.direccion+' '+r.descripcion+' '+tipoLabel(r)).toLowerCase();
   return (
     '<div class="ticket" data-id="'+r.id+'" data-colonia="'+escapeHtml(r.colonia)+'" data-estado="'+r.estado+'" data-search="'+escapeHtml(searchBlob)+'">' +
       '<div class="t-body">' +
         '<div class="t-top">' +
-          '<div><div class="t-colonia">'+escapeHtml(r.colonia)+(r.cp?' <span style="font-weight:400;color:var(--ink-faint);">· C.P. '+escapeHtml(r.cp)+'</span>':'')+'</div><div class="t-folio">'+folioOf(r)+'</div></div>' +
+          '<div><div class="t-colonia">'+escapeHtml(r.colonia)+'</div><div class="t-folio">'+folioOf(r)+'</div></div>' +
           '<div class="stamp '+r.estado+'"><span class="dot"></span>'+estadoLabel+'</div>' +
         '</div>' +
         '<div class="t-media">' +
@@ -1022,7 +1033,7 @@ function renderReportes(){
           return '<label class="report-select-item" data-colonia="'+escapeHtml(r.colonia)+'">' +
             '<input type="checkbox" class="chk-reporte" value="'+r.id+'">' +
             (r.foto ? '<img class="rt-thumb" src="'+r.foto+'">' : '<div class="rt-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--ink-faint);">'+iconSvg(cat.icon)+'</div>') +
-            '<div class="rt-info"><div class="rt-colonia">'+escapeHtml(r.colonia)+(r.cp?' · '+escapeHtml(r.cp):'')+'</div><div class="rt-tipo">'+escapeHtml(tipoLabel(r))+' · '+fmtDate(r.fechaCreacion)+'</div></div>' +
+            '<div class="rt-info"><div class="rt-colonia">'+escapeHtml(r.colonia)+'</div><div class="rt-tipo">'+escapeHtml(tipoLabel(r))+' · '+fmtDate(r.fechaCreacion)+'</div></div>' +
           '</label>';
         }).join('') +
       '</div>' +
@@ -1116,12 +1127,12 @@ async function generarInforme(){
     for(let i=0;i<seleccion.length;i++){
       const r = seleccion[i];
       const cat = CAT_MAP[r.tipo] || CAT_MAP.otro;
-      const blockH = 218;
+      const blockH = 260;
       if(y + blockH > pageH - margin){ doc.addPage(); y = margin; }
 
       // stamp folio + estado
       doc.setFont('helvetica','bold'); doc.setFontSize(12);
-      doc.text(folioOf(r) + '  ·  ' + r.colonia + (r.cp ? ' (C.P. ' + r.cp + ')' : ''), margin, y);
+      doc.text(folioOf(r) + '  ·  ' + r.colonia, margin, y);
       const estadoLabel = (ESTADOS.find(e=>e.id===r.estado)||ESTADOS[0]).label.toUpperCase();
       doc.setFontSize(9.5);
       doc.text('[' + estadoLabel + ']', pageW - margin - doc.getTextWidth('[' + estadoLabel + ']'), y);
@@ -1171,14 +1182,22 @@ async function generarInforme(){
         doc.text('Coordenadas: ' + r.lat.toFixed(5) + ', ' + r.lng.toFixed(5), textX, ty);
         doc.setTextColor(20);
         ty += 13;
+        if(r.direccionGeo){
+          doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(90);
+          const geoLines = doc.splitTextToSize('Ubicación exacta (geolocalizada): ' + r.direccionGeo, textW);
+          doc.text(geoLines, textX, ty); ty += geoLines.length * 10.5 + 3;
+          doc.setFontSize(10); doc.setTextColor(20);
+        }
       }
       const descLines = doc.splitTextToSize('Descripción: ' + r.descripcion, textW);
       doc.text(descLines, textX, ty); ty += descLines.length * 12 + 3;
       doc.setTextColor(120); doc.setFontSize(9);
       doc.text('Registrado: ' + fmtDateTimeShort(r.fechaCreacion), textX, ty);
       doc.setTextColor(20);
+      ty += 10;
 
-      y += Math.max(imgH, hasQR ? qrW + 20 : 0) + 22;
+      const alturaOcupada = Math.max(imgH, hasQR ? qrW + 20 : 0, ty - y);
+      y += alturaOcupada + 20;
       doc.setDrawColor(230); doc.line(margin, y-10, pageW-margin, y-10);
     }
 
