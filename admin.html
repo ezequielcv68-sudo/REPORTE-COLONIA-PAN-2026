@@ -54,16 +54,8 @@
     top: 0;
     z-index: 100;
   }
-  .brand-logo {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .pan-emblem {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-  }
+  .brand-logo { display: flex; align-items: center; gap: 14px; }
+  .pan-emblem { width: 44px; height: 44px; flex-shrink: 0; }
   .brand-title h1 {
     font-family: var(--font-display);
     font-size: 22px;
@@ -83,11 +75,7 @@
     text-transform: uppercase;
   }
 
-  .user-badge {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+  .user-badge { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
   .user-email {
     font-size: 12.5px;
     font-weight: 600;
@@ -97,7 +85,9 @@
     border-radius: 20px;
     border: 1px solid #D0DFFA;
   }
-  .btn-logout {
+  
+  /* Botones del Header */
+  .btn-header {
     background: transparent;
     border: 1.5px solid var(--pan-blue);
     color: var(--pan-blue);
@@ -111,17 +101,13 @@
     cursor: pointer;
     transition: all 0.2s;
   }
-  .btn-logout:hover {
-    background: var(--pan-blue);
-    color: #FFFFFF;
-  }
+  .btn-header:hover { background: var(--pan-blue); color: #FFFFFF; }
+  .btn-header.danger { border-color: #C23B3B; color: #C23B3B; }
+  .btn-header.danger:hover { background: #C23B3B; color: #FFFFFF; }
 
-  .wrapper {
-    max-width: 1280px;
-    margin: 28px auto;
-    padding: 0 20px 40px;
-  }
+  .wrapper { max-width: 1280px; margin: 28px auto; padding: 0 20px 40px; }
 
+  /* Login Card */
   .login-card {
     max-width: 420px;
     margin: 80px auto;
@@ -132,11 +118,7 @@
     text-align: center;
     border-top: 5px solid var(--pan-blue);
   }
-  .login-card .pan-emblem {
-    width: 68px;
-    height: 68px;
-    margin: 0 auto 14px;
-  }
+  .login-card .pan-emblem { width: 68px; height: 68px; margin: 0 auto 14px; }
   .login-card h2 {
     font-family: var(--font-display);
     font-size: 26px;
@@ -144,76 +126,45 @@
     margin: 0 0 6px;
     text-transform: uppercase;
   }
-  .login-card p {
-    font-size: 13px;
-    color: var(--ink-light);
-    margin: 0 0 24px;
-  }
+  .login-card p { font-size: 13px; color: var(--ink-light); margin: 0 0 24px; }
   .login-card input {
-    width: 100%;
-    padding: 12px 14px;
-    margin-bottom: 14px;
-    border-radius: var(--radius);
-    border: 1.5px solid var(--border);
-    background: #F8FAFC;
-    font-size: 14px;
-    outline: none;
+    width: 100%; padding: 12px 14px; margin-bottom: 14px;
+    border-radius: var(--radius); border: 1.5px solid var(--border);
+    background: #F8FAFC; font-size: 14px; outline: none;
   }
-  .login-card input:focus {
-    border-color: var(--pan-blue);
-    background: #FFFFFF;
-  }
+  .login-card input:focus { border-color: var(--pan-blue); background: #FFFFFF; }
 
   .btn-primary {
-    width: 100%;
-    padding: 12px 20px;
-    background: var(--pan-blue);
-    color: #FFFFFF;
-    border: none;
-    border-radius: var(--radius);
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 43, 127, 0.3);
-    transition: background 0.2s;
+    width: 100%; padding: 12px 20px; background: var(--pan-blue);
+    color: #FFFFFF; border: none; border-radius: var(--radius);
+    font-family: var(--font-display); font-size: 15px; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 43, 127, 0.3); transition: background 0.2s;
   }
   .btn-primary:hover { background: var(--pan-blue-light); }
   
+  .btn-link {
+    background: none; border: none; color: var(--pan-blue-light);
+    font-size: 13px; font-weight: 600; text-decoration: underline;
+    cursor: pointer; margin-top: 16px; font-family: var(--font-body);
+  }
+  .btn-link:hover { color: var(--pan-blue); }
+
   .btn-export {
-    background: #107C41;
-    color: #FFFFFF;
-    border: none;
-    padding: 10px 18px;
-    border-radius: var(--radius);
-    font-family: var(--font-display);
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 3px 10px rgba(16, 124, 65, 0.25);
+    background: #107C41; color: #FFFFFF; border: none; padding: 10px 18px;
+    border-radius: var(--radius); font-family: var(--font-display); font-size: 13px;
+    font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 3px 10px rgba(16, 124, 65, 0.25);
   }
   .btn-export:hover { background: #0B6132; }
 
   .link-foto {
-    background: none;
-    border: none;
-    color: var(--pan-blue-light);
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-    font-size: 13px;
-    font-family: var(--font-body);
+    background: none; border: none; color: var(--pan-blue-light);
+    font-weight: 600; cursor: pointer; text-decoration: underline;
+    padding: 0; font-size: 13px; font-family: var(--font-body);
   }
-  .link-foto:hover { color: var(--pan-blue); }
 
+  /* Modal de Imagen */
   .img-modal-overlay {
     position: fixed; inset: 0; background: rgba(0, 27, 84, 0.85);
     z-index: 1000; display: flex; align-items: center; justify-content: center;
@@ -224,104 +175,61 @@
     max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; gap: 14px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.5);
   }
-  .img-modal-content img {
-    max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px;
-  }
-  .img-modal-actions {
-    display: flex; justify-content: space-between; align-items: center;
-  }
+  .img-modal-content img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px; }
+  .img-modal-actions { display: flex; justify-content: space-between; align-items: center; }
 
+  /* Controls & Filters Bar */
   .controls-card {
-    background: var(--panel-bg);
-    padding: 16px 20px;
-    border-radius: var(--radius);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    margin-bottom: 20px;
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
+    background: var(--panel-bg); padding: 16px 20px; border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); margin-bottom: 20px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;
   }
-  .filter-group {
-    display: flex;
-    gap: 12px;
-    flex: 1;
-    min-width: 280px;
-  }
+  .filter-group { display: flex; gap: 12px; flex: 1; min-width: 280px; }
   .filter-group input, .filter-group select {
-    padding: 10px 14px;
-    border-radius: var(--radius);
-    border: 1.5px solid var(--border);
-    background: #FFFFFF;
-    font-size: 13.5px;
-    color: var(--ink);
-    outline: none;
+    padding: 10px 14px; border-radius: var(--radius); border: 1.5px solid var(--border);
+    background: #FFFFFF; font-size: 13.5px; color: var(--ink); outline: none;
   }
   .filter-group input { flex: 2; }
   .filter-group select { flex: 1; }
   .filter-group input:focus, .filter-group select:focus { border-color: var(--pan-blue); }
 
+  /* Data Table */
   .table-card {
-    background: var(--panel-bg);
-    border-radius: var(--radius);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    overflow: hidden;
+    background: var(--panel-bg); border-radius: var(--radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); overflow: hidden;
   }
   .table-wrapper { overflow-x: auto; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-  }
-  thead {
-    background: var(--pan-blue-dark);
-    color: #FFFFFF;
-  }
+  table { width: 100%; border-collapse: collapse; text-align: left; }
+  thead { background: var(--pan-blue-dark); color: #FFFFFF; }
   th {
-    padding: 14px 16px;
-    font-family: var(--font-display);
-    font-size: 13px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 600;
+    padding: 14px 16px; font-family: var(--font-display); font-size: 13px;
+    letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600;
   }
   td {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-    color: var(--ink);
-    vertical-align: middle;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    font-size: 13px; color: var(--ink); vertical-align: middle;
   }
   tbody tr { background: #FFFFFF; transition: background 0.15s; }
   tbody tr:nth-child(even) { background: #F8FAFC; }
   tbody tr:hover { background: #EBF3FF; }
 
   .badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-family: var(--font-display);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    display: inline-block; padding: 4px 10px; border-radius: 20px;
+    font-family: var(--font-display); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
   }
   .badge.pendiente { background: #FFE6E6; color: #C23B3B; border: 1px solid #FFB3B3; }
   .badge.en_proceso { background: #FFF4E5; color: #B9790A; border: 1px solid #FFE0B2; }
   .badge.aplicado { background: #E6F4EA; color: #2F7A4F; border: 1px solid #A3E2B8; }
 
-  .map-link {
-    color: var(--pan-blue-light);
-    font-weight: 600;
-    text-decoration: none;
-  }
+  .map-link { color: var(--pan-blue-light); font-weight: 600; text-decoration: none; }
   .map-link:hover { text-decoration: underline; }
 
   @media (max-width: 768px) {
-    header.navbar { padding: 10px 16px; }
+    header.navbar { padding: 10px 16px; flex-direction: column; gap: 12px; align-items: flex-start; }
     .brand-title h1 { font-size: 18px; }
     .filter-group { flex-direction: column; width: 100%; }
+    .user-badge { width: 100%; justify-content: space-between; }
   }
 </style>
 </head>
@@ -342,7 +250,9 @@
 
   <div id="userHeader" class="user-badge hidden">
     <span class="user-email" id="userMailText"></span>
-    <button class="btn-logout" id="btnLogout">Cerrar Sesión</button>
+    <!-- Botón Nuevo: Cambiar Contraseña -->
+    <button class="btn-header" id="btnChangePass">Cambiar mi contraseña</button>
+    <button class="btn-header danger" id="btnLogout">Cerrar Sesión</button>
   </div>
 </header>
 
@@ -359,6 +269,8 @@
     <input type="email" id="adminEmail" placeholder="Correo electrónico">
     <input type="password" id="adminPass" placeholder="Contraseña">
     <button class="btn-primary" id="btnLogin">Iniciar Sesión</button>
+    <!-- Botón Nuevo: Olvidé mi contraseña -->
+    <button class="btn-link" id="btnForgotPass">¿Olvidaste o quieres cambiar tu contraseña?</button>
   </div>
 
   <div id="adminDashboard" class="hidden">
@@ -419,6 +331,7 @@ const db = firebase.firestore();
 
 let ALL_REGISTROS = [];
 
+// Escuchador de sesión
 auth.onAuthStateChanged(user => {
   if (user) {
     document.getElementById('loginScreen').classList.add('hidden');
@@ -433,14 +346,51 @@ auth.onAuthStateChanged(user => {
   }
 });
 
+// Botón de Inicio de Sesión
 document.getElementById('btnLogin').addEventListener('click', () => {
   const email = document.getElementById('adminEmail').value;
   const pass = document.getElementById('adminPass').value;
+  if(!email || !pass) return alert("Ingresa tu correo y contraseña.");
   auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Error de acceso: " + err.message));
 });
 
+// Botón: Olvidé o quiero crear mi contraseña nueva (En el Login)
+document.getElementById('btnForgotPass').addEventListener('click', () => {
+  const email = document.getElementById('adminEmail').value.trim();
+  if (!email) {
+    alert("Por favor, escribe tu correo electrónico en el campo de arriba y presiona este botón para enviarte el enlace de recuperación.");
+    return;
+  }
+  auth.sendPasswordResetEmail(email)
+    .then(() => alert("Te enviamos un correo seguro con un enlace para crear tu nueva contraseña. Revisa tu bandeja de entrada o la carpeta de Spam."))
+    .catch(err => alert("Error: " + err.message));
+});
+
+// Botón: Cambiar Contraseña desde adentro (En el Dashboard)
+document.getElementById('btnChangePass').addEventListener('click', async () => {
+  const nuevaPass = prompt("Ingresa tu nueva contraseña secreta (Mínimo 6 caracteres):");
+  if (nuevaPass) {
+    if (nuevaPass.length < 6) {
+      alert("La contraseña es muy corta. Debe tener al menos 6 caracteres.");
+      return;
+    }
+    try {
+      await auth.currentUser.updatePassword(nuevaPass);
+      alert("¡Tu contraseña fue actualizada con éxito!");
+    } catch (error) {
+      if (error.code === 'auth/requires-recent-login') {
+        alert("Por seguridad, para cambiar tu contraseña debes cerrar sesión, volver a iniciar sesión e intentarlo de nuevo inmediatamente.");
+      } else {
+        alert("Ocurrió un error: " + error.message);
+      }
+    }
+  }
+});
+
+// Cerrar sesión
 document.getElementById('btnLogout').addEventListener('click', () => auth.signOut());
 
+// Funciones de Base de Datos y Tablas
 async function cargarTodosLosRegistros() {
   try {
     const snapshot = await db.collection("registros").orderBy("fechaCreacion", "desc").get();
@@ -509,7 +459,7 @@ window.abrirFoto = function(id) {
       <img src="${registro.foto}" alt="Evidencia Folio ${folio}">
       <div class="img-modal-actions">
         <a href="${registro.foto}" download="evidencia_${folio}.jpg" class="btn-primary" style="width:auto; padding:8px 16px; text-decoration:none; display:inline-block;">Descargar</a>
-        <button class="btn-logout" onclick="this.closest('.img-modal-overlay').remove()">Cerrar ventana</button>
+        <button class="btn-header danger" onclick="this.closest('.img-modal-overlay').remove()">Cerrar ventana</button>
       </div>
     </div>
   `;
