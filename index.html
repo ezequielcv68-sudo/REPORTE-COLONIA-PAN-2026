@@ -9,6 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
 <style>
   :root{
     --bg:#0A2A5E;
@@ -497,8 +502,21 @@
 <script>
 /* =========================================================
    PARTE DE OBRA — control de mejoras urbanas
-   Almacenamiento: window.storage (personal, no compartido)
+   Almacenamiento: Firebase Firestore (Centralizado en la nube)
    ========================================================= */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC3Vcpl2rxNlAg9KD8_xH8M77nRwvTyhq8",
+  authDomain: "mejoras-colonia-2026.firebaseapp.com",
+  projectId: "mejoras-colonia-2026",
+  storageBucket: "mejoras-colonia-2026.firebasestorage.app",
+  messagingSenderId: "162986211873",
+  appId: "1:162986211873:web:14ca62705283d3e2c50160",
+  measurementId: "G-R8W2TL7W04"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 const CATS = [
   { id:'bacheo', label:'Bacheo', icon:'<path d="M12 2L4 19h16L12 2z"/><line x1="7.5" y1="13" x2="16.5" y2="13"/><line x1="9.5" y1="8" x2="14.5" y2="8"/>' },
@@ -557,100 +575,34 @@ function folioOf(r){
   return 'F-'+yy+mm+dd+'-'+r.id.slice(-4).toUpperCase();
 }
 
-/* ---------------- storage layer ---------------- */
-const LS_PREFIX = 'parteDeObra:';
-function claudeStorageDisponible(){
-  return typeof window.storage !== 'undefined' && window.storage && typeof window.storage.set === 'function';
-}
-let MODO_ALMACENAMIENTO = null;
-
-function lsList(prefix){
-  const keys = [];
-  for(let i=0;i<localStorage.length;i++){
-    const k = localStorage.key(i);
-    if(k && k.indexOf(LS_PREFIX) === 0){
-      const bare = k.slice(LS_PREFIX.length);
-      if(!prefix || bare.indexOf(prefix) === 0) keys.push(bare);
-    }
-  }
-  return { keys };
-}
-function lsGet(key){
-  const raw = localStorage.getItem(LS_PREFIX+key);
-  return raw === null ? null : { key, value: raw };
-}
-function lsSet(key, value){
-  localStorage.setItem(LS_PREFIX+key, value);
-  return { key, value };
-}
-function lsDelete(key){
-  localStorage.removeItem(LS_PREFIX+key);
-  return { key, deleted:true };
-}
-
-async function storageList(prefix, shared){
-  if(claudeStorageDisponible()) return await window.storage.list(prefix, shared);
-  return lsList(prefix);
-}
-async function storageGet(key, shared){
-  if(claudeStorageDisponible()) return await window.storage.get(key, shared);
-  return lsGet(key);
-}
-async function storageSet(key, value, shared){
-  if(claudeStorageDisponible()) return await window.storage.set(key, value, shared);
-  return lsSet(key, value);
-}
-async function storageDelete(key, shared){
-  if(claudeStorageDisponible()) return await window.storage.delete(key, shared);
-  return lsDelete(key);
-}
-
+/* ---------------- storage layer (Firebase Firestore) ---------------- */
 async function loadAllRegistros(){
-  try{
-    const listRes = await storageList('registro:', false);
-    const keys = (listRes && listRes.keys) ? listRes.keys : [];
-    const out = [];
-    for(const k of keys){
-      try{
-        const r = await storageGet(k, false);
-        if(r && r.value){ out.push(JSON.parse(r.value)); }
-      }catch(e){ /* clave ilegible, se omite */ }
-    }
-    out.sort((a,b)=> b.fechaCreacion - a.fechaCreacion);
-    return out;
-  }catch(e){
-    console.error('Error cargando registros', e);
-    toast('No se pudieron cargar los registros guardados.');
+  try {
+    const snapshot = await db.collection("registros").orderBy("fechaCreacion", "desc").get();
+    return snapshot.docs.map(doc => doc.data());
+  } catch(e) {
+    console.error("Error al cargar de Firebase", e);
+    toast("No se pudieron cargar los datos de la nube.");
     return [];
   }
 }
+
 async function saveRegistro(record){
-  const attempt = async () => {
-    const res = await storageSet('registro:'+record.id, JSON.stringify(record), false);
-    if(!res) throw new Error('El almacenamiento no confirmó el guardado.');
-    return res;
-  };
-  try{
-    await attempt();
-    return { ok:true };
-  }catch(e1){
-    console.error('Error guardando registro (intento 1)', e1);
-    try{
-      await new Promise(r => setTimeout(r, 700));
-      await attempt();
-      return { ok:true };
-    }catch(e2){
-      console.error('Error guardando registro (intento 2)', e2);
-      return { ok:false, error: (e2 && e2.message) ? e2.message : 'error desconocido' };
-    }
+  try {
+    await db.collection("registros").doc(record.id).set(record);
+    return { ok: true };
+  } catch(e) {
+    console.error("Error guardando en Firebase", e);
+    return { ok: false, error: e.message };
   }
 }
+
 async function deleteRegistroStorage(id){
-  try{
-    await storageDelete('registro:'+id, false);
+  try {
+    await db.collection("registros").doc(id).delete();
     return true;
-  }catch(e){
-    console.error('Error eliminando registro', e);
+  } catch(e) {
+    console.error("Error eliminando de Firebase", e);
     return false;
   }
 }
@@ -989,6 +941,7 @@ function tipoLabel(r){
   if(r.tipo === 'otro' && r.tipoOtro) return cat.label + ': ' + r.tipoOtro;
   return cat.label;
 }
+
 function registroCardHtml(r){
   const cat = CAT_MAP[r.tipo] || CAT_MAP.otro;
   const estadoLabel = (ESTADOS.find(e=>e.id===r.estado) || ESTADOS[0]).label;
@@ -1090,7 +1043,6 @@ function aplicarFiltrosRegistros(){
   });
 }
 
-/* ================= RENDER: REPORTES ================= */
 function renderReportes(){
   const colonias = Array.from(new Set(STATE.registros.map(r=>r.colonia))).sort();
   el('main').innerHTML =
@@ -1145,7 +1097,6 @@ function renderReportes(){
   el('btnExportarExcel').addEventListener('click', descargarRespaldoExcel);
 }
 
-/* ---------------- generación de PDF ---------------- */
 function generarQR(texto, size){
   return new Promise((resolve)=>{
     if(typeof QRCode === 'undefined'){ resolve(null); return; }
@@ -1384,15 +1335,13 @@ document.querySelectorAll('.tab-btn').forEach(b=>{
 });
 
 async function init(){
-  el('main').innerHTML = '<div class="loader"><span class="spin"></span> Cargando registros…</div>';
-  MODO_ALMACENAMIENTO = claudeStorageDisponible() ? 'claude' : 'local';
+  el('main').innerHTML = '<div class="loader"><span class="spin"></span> Cargando registros de la nube…</div>';
   STATE.registros = await loadAllRegistros();
   STATE.loaded = true;
   const nColonias = new Set(STATE.registros.map(r=>r.colonia)).size;
-  const modoTxt = MODO_ALMACENAMIENTO === 'local' ? ' · guardado en este navegador' : '';
   el('brandSub').textContent = (STATE.registros.length
-    ? STATE.registros.length + ' registro(s) · ' + nColonias + ' colonia(s)'
-    : 'sin registros aún — comienza por "Nuevo"') + modoTxt;
+    ? STATE.registros.length + ' registro(s) en nube · ' + nColonias + ' colonia(s)'
+    : 'sin registros aún — comienza por "Nuevo"');
   setTab('nuevo');
 }
 init();
