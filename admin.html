@@ -43,7 +43,6 @@
 
   .hidden { display: none !important; }
 
-  /* Top Navigation Bar */
   header.navbar {
     background: #FFFFFF;
     padding: 12px 24px;
@@ -84,7 +83,6 @@
     text-transform: uppercase;
   }
 
-  /* User Info / Logout */
   .user-badge {
     display: flex;
     align-items: center;
@@ -118,14 +116,12 @@
     color: #FFFFFF;
   }
 
-  /* Main Container */
   .wrapper {
     max-width: 1280px;
     margin: 28px auto;
     padding: 0 20px 40px;
   }
 
-  /* Login Card */
   .login-card {
     max-width: 420px;
     margin: 80px auto;
@@ -168,7 +164,6 @@
     background: #FFFFFF;
   }
 
-  /* Buttons */
   .btn-primary {
     width: 100%;
     padding: 12px 20px;
@@ -206,7 +201,6 @@
   }
   .btn-export:hover { background: #0B6132; }
 
-  /* Ver Foto Link */
   .link-foto {
     background: none;
     border: none;
@@ -220,7 +214,6 @@
   }
   .link-foto:hover { color: var(--pan-blue); }
 
-  /* Modal de Imagen */
   .img-modal-overlay {
     position: fixed; inset: 0; background: rgba(0, 27, 84, 0.85);
     z-index: 1000; display: flex; align-items: center; justify-content: center;
@@ -238,7 +231,6 @@
     display: flex; justify-content: space-between; align-items: center;
   }
 
-  /* Controls & Filters Bar */
   .controls-card {
     background: var(--panel-bg);
     padding: 16px 20px;
@@ -270,7 +262,6 @@
   .filter-group select { flex: 1; }
   .filter-group input:focus, .filter-group select:focus { border-color: var(--pan-blue); }
 
-  /* Data Table */
   .table-card {
     background: var(--panel-bg);
     border-radius: var(--radius);
@@ -306,7 +297,6 @@
   tbody tr:nth-child(even) { background: #F8FAFC; }
   tbody tr:hover { background: #EBF3FF; }
 
-  /* Badges */
   .badge {
     display: inline-block;
     padding: 4px 10px;
@@ -337,10 +327,8 @@
 </head>
 <body>
 
-<!-- Header Superior Oficial PAN -->
 <header class="navbar">
   <div class="brand-logo">
-    <!-- Emblema Oficial PAN SVG -->
     <svg class="pan-emblem" viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="48" fill="#002B7F"/>
       <circle cx="50" cy="50" r="41" fill="none" stroke="#FFFFFF" stroke-width="3.5"/>
@@ -360,7 +348,6 @@
 
 <div class="wrapper">
 
-  <!-- Formulario de Acceso -->
   <div id="loginScreen" class="login-card">
     <svg class="pan-emblem" viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="48" fill="#002B7F"/>
@@ -374,13 +361,11 @@
     <button class="btn-primary" id="btnLogin">Iniciar Sesión</button>
   </div>
 
-  <!-- Dashboard Principal -->
   <div id="adminDashboard" class="hidden">
     
-    <!-- Barra de Filtros y Exportación -->
     <div class="controls-card">
       <div class="filter-group">
-        <input type="text" id="filterText" placeholder="Buscar por colonia, dirección o descripción…">
+        <input type="text" id="filterText" placeholder="Buscar por brigadista, colonia, dirección o descripción…">
         <select id="filterColonia">
           <option value="">Todas las colonias</option>
         </select>
@@ -391,7 +376,6 @@
       </button>
     </div>
 
-    <!-- Tabla General -->
     <div class="table-card">
       <div class="table-wrapper">
         <table>
@@ -399,6 +383,7 @@
             <tr>
               <th>Folio</th>
               <th>Fecha</th>
+              <th>Brigadista</th>
               <th>Colonia</th>
               <th>Dirección / Referencia</th>
               <th>Tipo</th>
@@ -482,7 +467,7 @@ function formatearFolio(id, msFecha) {
 function renderTabla(registros) {
   const tbody = document.getElementById('tableBody');
   if (!registros.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#718096;">No hay registros para mostrar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#718096;">No hay registros para mostrar.</td></tr>';
     return;
   }
 
@@ -492,14 +477,13 @@ function renderTabla(registros) {
     const coords = (r.lat && r.lng) ? `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" class="map-link">Ver en mapa ↗</a>` : '<span style="color:#A0AEC0;">Sin GPS</span>';
     const estado = r.estado || 'pendiente';
     const estadoFmt = estado.replace('_', ' ');
-    
-    // Botón para ver foto si existe
     const btnEvidencia = r.foto ? `<button class="link-foto" onclick="abrirFoto('${r.id}')">Ver foto</button>` : '<span style="color:#A0AEC0;">Sin foto</span>';
 
     return `
       <tr>
         <td><b>${folio}</b></td>
         <td>${d.toLocaleDateString('es-MX')} <br><small style="color:#718096;">${d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</small></td>
+        <td><b>${r.nombre || 'Sin nombre'}</b></td>
         <td><b>${r.colonia}</b></td>
         <td>${r.direccion} ${r.referencia ? '<br><small style="color:#718096;">Ref: '+r.referencia+'</small>' : ''}</td>
         <td style="text-transform:capitalize;">${r.tipo}</td>
@@ -512,7 +496,6 @@ function renderTabla(registros) {
   }).join('');
 }
 
-// Función global para mostrar la foto en pantalla completa
 window.abrirFoto = function(id) {
   const registro = ALL_REGISTROS.find(r => r.id === id);
   if (!registro || !registro.foto) return;
@@ -531,7 +514,6 @@ window.abrirFoto = function(id) {
     </div>
   `;
   
-  // Cerrar al hacer clic en el fondo oscuro
   overlay.addEventListener('click', (e) => {
     if(e.target === overlay) overlay.remove();
   });
@@ -547,7 +529,7 @@ function aplicarFiltros() {
   const col = document.getElementById('filterColonia').value;
 
   const filtrados = ALL_REGISTROS.filter(r => {
-    const matchTxt = !txt || (r.colonia + ' ' + r.direccion + ' ' + r.descripcion + ' ' + r.tipo).toLowerCase().includes(txt);
+    const matchTxt = !txt || (r.nombre + ' ' + r.colonia + ' ' + r.direccion + ' ' + r.descripcion + ' ' + r.tipo).toLowerCase().includes(txt);
     const matchCol = !col || r.colonia === col;
     return matchTxt && matchCol;
   });
@@ -558,13 +540,14 @@ function aplicarFiltros() {
 document.getElementById('btnExport').addEventListener('click', () => {
   if (!ALL_REGISTROS.length) return alert('No hay datos disponibles para exportar.');
 
-  const encabezados = ['Folio', 'Fecha', 'Colonia', 'Dirección', 'Referencia', 'Categoría', 'Descripción', 'Estado', 'Coordenadas GPS'];
+  const encabezados = ['Folio', 'Fecha', 'Brigadista', 'Colonia', 'Dirección', 'Referencia', 'Categoría', 'Descripción', 'Estado', 'Coordenadas GPS'];
   const filas = ALL_REGISTROS.map(r => {
     const d = new Date(r.fechaCreacion);
     const folio = formatearFolio(r.id, r.fechaCreacion);
     return [
       folio,
       d.toLocaleDateString('es-MX'),
+      `"${(r.nombre || 'Sin nombre').replace(/"/g, '""')}"`,
       `"${(r.colonia || '').replace(/"/g, '""')}"`,
       `"${(r.direccion || '').replace(/"/g, '""')}"`,
       `"${(r.referencia || '').replace(/"/g, '""')}"`,
