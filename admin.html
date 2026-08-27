@@ -186,6 +186,7 @@
     transition: background 0.2s;
   }
   .btn-primary:hover { background: var(--pan-blue-light); }
+  
   .btn-export {
     background: #107C41;
     color: #FFFFFF;
@@ -204,6 +205,38 @@
     box-shadow: 0 3px 10px rgba(16, 124, 65, 0.25);
   }
   .btn-export:hover { background: #0B6132; }
+
+  /* Ver Foto Link */
+  .link-foto {
+    background: none;
+    border: none;
+    color: var(--pan-blue-light);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    font-size: 13px;
+    font-family: var(--font-body);
+  }
+  .link-foto:hover { color: var(--pan-blue); }
+
+  /* Modal de Imagen */
+  .img-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0, 27, 84, 0.85);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .img-modal-content {
+    background: #FFFFFF; padding: 16px; border-radius: 12px;
+    max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  .img-modal-content img {
+    max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px;
+  }
+  .img-modal-actions {
+    display: flex; justify-content: space-between; align-items: center;
+  }
 
   /* Controls & Filters Bar */
   .controls-card {
@@ -371,6 +404,7 @@
               <th>Tipo</th>
               <th>Descripción</th>
               <th>Estado</th>
+              <th>Evidencia</th>
               <th>GPS</th>
             </tr>
           </thead>
@@ -440,19 +474,27 @@ function poblarColonias() {
     colonias.map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
+function formatearFolio(id, msFecha) {
+  const d = new Date(msFecha);
+  return 'F-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + '-' + id.slice(-4).toUpperCase();
+}
+
 function renderTabla(registros) {
   const tbody = document.getElementById('tableBody');
   if (!registros.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#718096;">No hay registros para mostrar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#718096;">No hay registros para mostrar.</td></tr>';
     return;
   }
 
   tbody.innerHTML = registros.map(r => {
     const d = new Date(r.fechaCreacion);
-    const folio = 'F-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + '-' + r.id.slice(-4).toUpperCase();
+    const folio = formatearFolio(r.id, r.fechaCreacion);
     const coords = (r.lat && r.lng) ? `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" class="map-link">Ver en mapa ↗</a>` : '<span style="color:#A0AEC0;">Sin GPS</span>';
     const estado = r.estado || 'pendiente';
     const estadoFmt = estado.replace('_', ' ');
+    
+    // Botón para ver foto si existe
+    const btnEvidencia = r.foto ? `<button class="link-foto" onclick="abrirFoto('${r.id}')">Ver foto</button>` : '<span style="color:#A0AEC0;">Sin foto</span>';
 
     return `
       <tr>
@@ -463,11 +505,39 @@ function renderTabla(registros) {
         <td style="text-transform:capitalize;">${r.tipo}</td>
         <td>${r.descripcion}</td>
         <td><span class="badge ${estado}">${estadoFmt}</span></td>
+        <td>${btnEvidencia}</td>
         <td>${coords}</td>
       </tr>
     `;
   }).join('');
 }
+
+// Función global para mostrar la foto en pantalla completa
+window.abrirFoto = function(id) {
+  const registro = ALL_REGISTROS.find(r => r.id === id);
+  if (!registro || !registro.foto) return;
+
+  const folio = formatearFolio(registro.id, registro.fechaCreacion);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'img-modal-overlay';
+  overlay.innerHTML = `
+    <div class="img-modal-content">
+      <img src="${registro.foto}" alt="Evidencia Folio ${folio}">
+      <div class="img-modal-actions">
+        <a href="${registro.foto}" download="evidencia_${folio}.jpg" class="btn-primary" style="width:auto; padding:8px 16px; text-decoration:none; display:inline-block;">Descargar</a>
+        <button class="btn-logout" onclick="this.closest('.img-modal-overlay').remove()">Cerrar ventana</button>
+      </div>
+    </div>
+  `;
+  
+  // Cerrar al hacer clic en el fondo oscuro
+  overlay.addEventListener('click', (e) => {
+    if(e.target === overlay) overlay.remove();
+  });
+
+  document.body.appendChild(overlay);
+};
 
 document.getElementById('filterText').addEventListener('input', aplicarFiltros);
 document.getElementById('filterColonia').addEventListener('change', aplicarFiltros);
@@ -491,7 +561,7 @@ document.getElementById('btnExport').addEventListener('click', () => {
   const encabezados = ['Folio', 'Fecha', 'Colonia', 'Dirección', 'Referencia', 'Categoría', 'Descripción', 'Estado', 'Coordenadas GPS'];
   const filas = ALL_REGISTROS.map(r => {
     const d = new Date(r.fechaCreacion);
-    const folio = 'F-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + '-' + r.id.slice(-4).toUpperCase();
+    const folio = formatearFolio(r.id, r.fechaCreacion);
     return [
       folio,
       d.toLocaleDateString('es-MX'),
