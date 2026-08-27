@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PANEL DE ADMINISTRACIÓN — MEJORAS EN TU COLONIA</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<style>
+  :root {
+    --bg: #0A2A5E;
+    --panel: #0F3878;
+    --accent: #2E6FE0;
+    --paper: #FFFFFF;
+    --text: #FFFFFF;
+    --border: rgba(196,209,230,.22);
+  }
+  * { box-sizing: border-box; font-family: 'Work Sans', sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
+  .hidden { display: none !important; }
+
+  .login-card {
+    max-width: 380px; margin: 80px auto; background: var(--panel);
+    padding: 30px 24px; border-radius: 8px; border: 1px solid var(--border);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center;
+  }
+  .login-card h2 { font-family: 'Oswald', sans-serif; font-size: 24px; margin-top: 0; }
+  .login-card input {
+    width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 4px;
+    border: 1px solid var(--border); background: var(--bg); color: #fff;
+  }
+  .btn {
+    width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none;
+    border-radius: 4px; font-family: 'Oswald', sans-serif; font-size: 16px;
+    text-transform: uppercase; cursor: pointer; font-weight: 600;
+  }
+  .btn:hover { background: #1E54B8; }
+
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .header h1 { font-family: 'Oswald', sans-serif; margin: 0; font-size: 26px; }
+  .btn-logout { background: transparent; border: 1px solid var(--border); color: #fff; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+
+  .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .controls input, .controls select {
+    padding: 10px; border-radius: 4px; border: 1px solid var(--border);
+    background: var(--panel); color: #fff; flex: 1; min-width: 180px;
+  }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 6px; overflow: hidden; }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+  th { background: rgba(0,0,0,0.2); font-family: 'Oswald', sans-serif; letter-spacing: 0.05em; }
+  tr:hover { background: rgba(255,255,255,0.03); }
+  .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; text-transform: uppercase; font-weight: bold; }
+  .badge.pendiente { background: #C23B3B; }
+  .badge.en_proceso { background: #B9790A; }
+  .badge.aplicado { background: #2F7A4F; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-card">
+  <h2>Acceso Administrativo</h2>
+  <input type="email" id="adminEmail" placeholder="Correo electrónico">
+  <input type="password" id="adminPass" placeholder="Contraseña">
+  <button class="btn" id="btnLogin">Iniciar Sesión</button>
+</div>
+
+<div id="adminDashboard" class="hidden">
+  <div class="header">
+    <div>
+      <h1>PANEL GLOBAL DE REGISTROS</h1>
+      <small id="userMailText" style="opacity:0.7;"></small>
+    </div>
+    <button class="btn-logout" id="btnLogout">Cerrar Sesión</button>
+  </div>
+
+  <div class="controls">
+    <input type="text" id="filterText" placeholder="Buscar colonia, dirección o tipo…">
+    <select id="filterColonia"><option value="">Todas las colonias</option></select>
+    <button class="btn" id="btnExport" style="width: auto;">Descargar Todo a Excel (CSV)</button>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Folio</th>
+          <th>Fecha</th>
+          <th>Colonia</th>
+          <th>Dirección</th>
+          <th>Tipo</th>
+          <th>Descripción</th>
+          <th>Estado</th>
+          <th>GPS</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC3Vcpl2rxNlAg9KD8_xH8M77nRwvTyhq8",
+  authDomain: "mejoras-colonia-2026.firebaseapp.com",
+  projectId: "mejoras-colonia-2026",
+  storageBucket: "mejoras-colonia-2026.firebasestorage.app",
+  messagingSenderId: "162986211873",
+  appId: "1:162986211873:web:14ca62705283d3e2c50160",
+  measurementId: "G-R8W2TL7W04"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let ALL_REGISTROS = [];
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('adminDashboard').classList.remove('hidden');
+    document.getElementById('userMailText').textContent = user.email;
+    cargarTodosLosRegistros();
+  } else {
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('adminDashboard').classList.add('hidden');
+  }
+});
+
+document.getElementById('btnLogin').addEventListener('click', () => {
+  const email = document.getElementById('adminEmail').value;
+  const pass = document.getElementById('adminPass').value;
+  auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Error de acceso: " + err.message));
+});
+
+document.getElementById('btnLogout').addEventListener('click', () => auth.signOut());
+
+async function cargarTodosLosRegistros() {
+  const snapshot = await db.collection("registros").orderBy("fechaCreacion", "desc").get();
+  ALL_REGISTROS = snapshot.docs.map(doc => doc.data());
+  
+  poblarColonias();
+  renderTabla(ALL_REGISTROS);
+}
+
+function poblarColonias() {
+  const colonias = Array.from(new Set(ALL_REGISTROS.map(r => r.colonia))).sort();
+  const select = document.getElementById('filterColonia');
+  select.innerHTML = '<option value="">Todas las colonias</option>' + 
+    colonias.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function renderTabla(registros) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = registros.map(r => {
+    const d = new Date(r.fechaCreacion);
+    const folio = 'F-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + '-' + r.id.slice(-4).toUpperCase();
+    const coords = (r.lat && r.lng) ? `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" style="color:var(--accent);">Ver mapa</a>` : 'Sin GPS';
+    
+    return `
+      <tr>
+        <td><b>${folio}</b></td>
+        <td>${d.toLocaleDateString('es-MX')} ${d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</td>
+        <td>${r.colonia}</td>
+        <td>${r.direccion}</td>
+        <td>${r.tipo}</td>
+        <td>${r.descripcion}</td>
+        <td><span class="badge ${r.estado}">${r.estado}</span></td>
+        <td>${coords}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+document.getElementById('filterText').addEventListener('input', aplicarFiltros);
+document.getElementById('filterColonia').addEventListener('change', aplicarFiltros);
+
+function aplicarFiltros() {
+  const txt = document.getElementById('filterText').value.toLowerCase();
+  const col = document.getElementById('filterColonia').value;
+
+  const filtrados = ALL_REGISTROS.filter(r => {
+    const matchTxt = !txt || (r.colonia + ' ' + r.direccion + ' ' + r.descripcion + ' ' + r.tipo).toLowerCase().includes(txt);
+    const matchCol = !col || r.colonia === col;
+    return matchTxt && matchCol;
+  });
+
+  renderTabla(filtrados);
+}
+
+document.getElementById('btnExport').addEventListener('click', () => {
+  if (!ALL_REGISTROS.length) return alert('No hay datos.');
+
+  const encabezados = ['Folio', 'Fecha', 'Colonia', 'Dirección', 'Referencia', 'Categoría', 'Descripción', 'Estado', 'Coordenadas GPS'];
+  const filas = ALL_REGISTROS.map(r => {
+    const d = new Date(r.fechaCreacion);
+    const folio = 'F-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + '-' + r.id.slice(-4).toUpperCase();
+    return [
+      folio,
+      d.toLocaleDateString('es-MX'),
+      `"${r.colonia}"`,
+      `"${r.direccion}"`,
+      `"${r.referencia || ''}"`,
+      `"${r.tipo}"`,
+      `"${r.descripcion}"`,
+      r.estado,
+      `"${r.lat || ''}, ${r.lng || ''}"`
+    ].join(',');
+  });
+
+  const contenido = '\uFEFF' + [encabezados.join(','), ...filas].join('\n');
+  const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `reporte_global_administracion_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+});
+</script>
+</body>
+</html>
