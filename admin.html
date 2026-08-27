@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PANEL DE ADMINISTRACIÓN — MEJORAS EN TU COLONIA</title>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>PANEL DE ADMINISTRACIÓN — MEJORAS EN TU COLONIA 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -13,95 +15,372 @@
 
 <style>
   :root {
-    --bg: #0A2A5E;
-    --panel: #0F3878;
-    --accent: #2E6FE0;
+    --pan-blue: #002B7F;
+    --pan-blue-light: #0047BA;
+    --pan-blue-dark: #001B54;
+    --pan-cyan: #00C2FF;
     --paper: #FFFFFF;
-    --text: #FFFFFF;
-    --border: rgba(196,209,230,.22);
+    --bg-gradient: linear-gradient(135deg, #001A4D 0%, #002B7F 45%, #0052CC 85%, #00A3E0 100%);
+    --panel-bg: rgba(255, 255, 255, 0.96);
+    --ink: #0A1931;
+    --ink-light: #4A5568;
+    --border: #E2E8F0;
+    --radius: 8px;
+    --font-display: 'Oswald', sans-serif;
+    --font-body: 'Work Sans', sans-serif;
   }
-  * { box-sizing: border-box; font-family: 'Work Sans', sans-serif; }
-  body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
   .hidden { display: none !important; }
 
+  /* Top Navigation Bar */
+  header.navbar {
+    background: #FFFFFF;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .pan-emblem {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+  .brand-title h1 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--pan-blue);
+    margin: 0;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .brand-title p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-light);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* User Info / Logout */
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .user-email {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--pan-blue-dark);
+    background: #F0F4FA;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid #D0DFFA;
+  }
+  .btn-logout {
+    background: transparent;
+    border: 1.5px solid var(--pan-blue);
+    color: var(--pan-blue);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-logout:hover {
+    background: var(--pan-blue);
+    color: #FFFFFF;
+  }
+
+  /* Main Container */
+  .wrapper {
+    max-width: 1280px;
+    margin: 28px auto;
+    padding: 0 20px 40px;
+  }
+
+  /* Login Card */
   .login-card {
-    max-width: 380px; margin: 80px auto; background: var(--panel);
-    padding: 30px 24px; border-radius: 8px; border: 1px solid var(--border);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center;
+    max-width: 420px;
+    margin: 80px auto;
+    background: var(--paper);
+    padding: 36px 30px;
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    border-top: 5px solid var(--pan-blue);
   }
-  .login-card h2 { font-family: 'Oswald', sans-serif; font-size: 24px; margin-top: 0; }
+  .login-card .pan-emblem {
+    width: 68px;
+    height: 68px;
+    margin: 0 auto 14px;
+  }
+  .login-card h2 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    color: var(--pan-blue);
+    margin: 0 0 6px;
+    text-transform: uppercase;
+  }
+  .login-card p {
+    font-size: 13px;
+    color: var(--ink-light);
+    margin: 0 0 24px;
+  }
   .login-card input {
-    width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 4px;
-    border: 1px solid var(--border); background: var(--bg); color: #fff;
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: #F8FAFC;
+    font-size: 14px;
+    outline: none;
   }
-  .btn {
-    width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none;
-    border-radius: 4px; font-family: 'Oswald', sans-serif; font-size: 16px;
-    text-transform: uppercase; cursor: pointer; font-weight: 600;
-  }
-  .btn:hover { background: #1E54B8; }
-
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .header h1 { font-family: 'Oswald', sans-serif; margin: 0; font-size: 26px; }
-  .btn-logout { background: transparent; border: 1px solid var(--border); color: #fff; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-
-  .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-  .controls input, .controls select {
-    padding: 10px; border-radius: 4px; border: 1px solid var(--border);
-    background: var(--panel); color: #fff; flex: 1; min-width: 180px;
+  .login-card input:focus {
+    border-color: var(--pan-blue);
+    background: #FFFFFF;
   }
 
-  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 6px; overflow: hidden; }
-  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
-  th { background: rgba(0,0,0,0.2); font-family: 'Oswald', sans-serif; letter-spacing: 0.05em; }
-  tr:hover { background: rgba(255,255,255,0.03); }
-  .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; text-transform: uppercase; font-weight: bold; }
-  .badge.pendiente { background: #C23B3B; }
-  .badge.en_proceso { background: #B9790A; }
-  .badge.aplicado { background: #2F7A4F; }
+  /* Buttons */
+  .btn-primary {
+    width: 100%;
+    padding: 12px 20px;
+    background: var(--pan-blue);
+    color: #FFFFFF;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 43, 127, 0.3);
+    transition: background 0.2s;
+  }
+  .btn-primary:hover { background: var(--pan-blue-light); }
+  .btn-export {
+    background: #107C41;
+    color: #FFFFFF;
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 3px 10px rgba(16, 124, 65, 0.25);
+  }
+  .btn-export:hover { background: #0B6132; }
+
+  /* Controls & Filters Bar */
+  .controls-card {
+    background: var(--panel-bg);
+    padding: 16px 20px;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .filter-group {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+    min-width: 280px;
+  }
+  .filter-group input, .filter-group select {
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: #FFFFFF;
+    font-size: 13.5px;
+    color: var(--ink);
+    outline: none;
+  }
+  .filter-group input { flex: 2; }
+  .filter-group select { flex: 1; }
+  .filter-group input:focus, .filter-group select:focus { border-color: var(--pan-blue); }
+
+  /* Data Table */
+  .table-card {
+    background: var(--panel-bg);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+  .table-wrapper { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+  thead {
+    background: var(--pan-blue-dark);
+    color: #FFFFFF;
+  }
+  th {
+    padding: 14px 16px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--ink);
+    vertical-align: middle;
+  }
+  tbody tr { background: #FFFFFF; transition: background 0.15s; }
+  tbody tr:nth-child(even) { background: #F8FAFC; }
+  tbody tr:hover { background: #EBF3FF; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .badge.pendiente { background: #FFE6E6; color: #C23B3B; border: 1px solid #FFB3B3; }
+  .badge.en_proceso { background: #FFF4E5; color: #B9790A; border: 1px solid #FFE0B2; }
+  .badge.aplicado { background: #E6F4EA; color: #2F7A4F; border: 1px solid #A3E2B8; }
+
+  .map-link {
+    color: var(--pan-blue-light);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .map-link:hover { text-decoration: underline; }
+
+  @media (max-width: 768px) {
+    header.navbar { padding: 10px 16px; }
+    .brand-title h1 { font-size: 18px; }
+    .filter-group { flex-direction: column; width: 100%; }
+  }
 </style>
 </head>
 <body>
 
-<div id="loginScreen" class="login-card">
-  <h2>Acceso Administrativo</h2>
-  <input type="email" id="adminEmail" placeholder="Correo electrónico">
-  <input type="password" id="adminPass" placeholder="Contraseña">
-  <button class="btn" id="btnLogin">Iniciar Sesión</button>
-</div>
-
-<div id="adminDashboard" class="hidden">
-  <div class="header">
-    <div>
-      <h1>PANEL GLOBAL DE REGISTROS</h1>
-      <small id="userMailText" style="opacity:0.7;"></small>
+<!-- Header Superior Oficial PAN -->
+<header class="navbar">
+  <div class="brand-logo">
+    <!-- Emblema Oficial PAN SVG -->
+    <svg class="pan-emblem" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" fill="#002B7F"/>
+      <circle cx="50" cy="50" r="41" fill="none" stroke="#FFFFFF" stroke-width="3.5"/>
+      <text x="50" y="63" font-family="'Oswald', sans-serif" font-weight="700" font-size="35" fill="#FFFFFF" text-anchor="middle" letter-spacing="-1">PAN</text>
+    </svg>
+    <div class="brand-title">
+      <h1>Panel de Administración</h1>
+      <p>Plataforma de Control Urbano 2026</p>
     </div>
+  </div>
+
+  <div id="userHeader" class="user-badge hidden">
+    <span class="user-email" id="userMailText"></span>
     <button class="btn-logout" id="btnLogout">Cerrar Sesión</button>
   </div>
+</header>
 
-  <div class="controls">
-    <input type="text" id="filterText" placeholder="Buscar colonia, dirección o tipo…">
-    <select id="filterColonia"><option value="">Todas las colonias</option></select>
-    <button class="btn" id="btnExport" style="width: auto;">Descargar Todo a Excel (CSV)</button>
+<div class="wrapper">
+
+  <!-- Formulario de Acceso -->
+  <div id="loginScreen" class="login-card">
+    <svg class="pan-emblem" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" fill="#002B7F"/>
+      <circle cx="50" cy="50" r="41" fill="none" stroke="#FFFFFF" stroke-width="3.5"/>
+      <text x="50" y="63" font-family="'Oswald', sans-serif" font-weight="700" font-size="35" fill="#FFFFFF" text-anchor="middle" letter-spacing="-1">PAN</text>
+    </svg>
+    <h2>Acceso Administrador</h2>
+    <p>Ingresa tus credenciales autorizadas</p>
+    <input type="email" id="adminEmail" placeholder="Correo electrónico">
+    <input type="password" id="adminPass" placeholder="Contraseña">
+    <button class="btn-primary" id="btnLogin">Iniciar Sesión</button>
   </div>
 
-  <div style="overflow-x: auto;">
-    <table>
-      <thead>
-        <tr>
-          <th>Folio</th>
-          <th>Fecha</th>
-          <th>Colonia</th>
-          <th>Dirección</th>
-          <th>Tipo</th>
-          <th>Descripción</th>
-          <th>Estado</th>
-          <th>GPS</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+  <!-- Dashboard Principal -->
+  <div id="adminDashboard" class="hidden">
+    
+    <!-- Barra de Filtros y Exportación -->
+    <div class="controls-card">
+      <div class="filter-group">
+        <input type="text" id="filterText" placeholder="Buscar por colonia, dirección o descripción…">
+        <select id="filterColonia">
+          <option value="">Todas las colonias</option>
+        </select>
+      </div>
+      <button class="btn-export" id="btnExport">
+        <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Descargar Excel (CSV)
+      </button>
+    </div>
+
+    <!-- Tabla General -->
+    <div class="table-card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Folio</th>
+              <th>Fecha</th>
+              <th>Colonia</th>
+              <th>Dirección / Referencia</th>
+              <th>Tipo</th>
+              <th>Descripción</th>
+              <th>Estado</th>
+              <th>GPS</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
+
 </div>
 
 <script>
@@ -125,11 +404,13 @@ auth.onAuthStateChanged(user => {
   if (user) {
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('adminDashboard').classList.remove('hidden');
+    document.getElementById('userHeader').classList.remove('hidden');
     document.getElementById('userMailText').textContent = user.email;
     cargarTodosLosRegistros();
   } else {
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('adminDashboard').classList.add('hidden');
+    document.getElementById('userHeader').classList.add('hidden');
   }
 });
 
@@ -142,11 +423,14 @@ document.getElementById('btnLogin').addEventListener('click', () => {
 document.getElementById('btnLogout').addEventListener('click', () => auth.signOut());
 
 async function cargarTodosLosRegistros() {
-  const snapshot = await db.collection("registros").orderBy("fechaCreacion", "desc").get();
-  ALL_REGISTROS = snapshot.docs.map(doc => doc.data());
-  
-  poblarColonias();
-  renderTabla(ALL_REGISTROS);
+  try {
+    const snapshot = await db.collection("registros").orderBy("fechaCreacion", "desc").get();
+    ALL_REGISTROS = snapshot.docs.map(doc => doc.data());
+    poblarColonias();
+    renderTabla(ALL_REGISTROS);
+  } catch (e) {
+    console.error("Error al cargar registros:", e);
+  }
 }
 
 function poblarColonias() {
@@ -158,20 +442,27 @@ function poblarColonias() {
 
 function renderTabla(registros) {
   const tbody = document.getElementById('tableBody');
+  if (!registros.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#718096;">No hay registros para mostrar.</td></tr>';
+    return;
+  }
+
   tbody.innerHTML = registros.map(r => {
     const d = new Date(r.fechaCreacion);
     const folio = 'F-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + '-' + r.id.slice(-4).toUpperCase();
-    const coords = (r.lat && r.lng) ? `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" style="color:var(--accent);">Ver mapa</a>` : 'Sin GPS';
-    
+    const coords = (r.lat && r.lng) ? `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" class="map-link">Ver en mapa ↗</a>` : '<span style="color:#A0AEC0;">Sin GPS</span>';
+    const estado = r.estado || 'pendiente';
+    const estadoFmt = estado.replace('_', ' ');
+
     return `
       <tr>
         <td><b>${folio}</b></td>
-        <td>${d.toLocaleDateString('es-MX')} ${d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</td>
-        <td>${r.colonia}</td>
-        <td>${r.direccion}</td>
-        <td>${r.tipo}</td>
+        <td>${d.toLocaleDateString('es-MX')} <br><small style="color:#718096;">${d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</small></td>
+        <td><b>${r.colonia}</b></td>
+        <td>${r.direccion} ${r.referencia ? '<br><small style="color:#718096;">Ref: '+r.referencia+'</small>' : ''}</td>
+        <td style="text-transform:capitalize;">${r.tipo}</td>
         <td>${r.descripcion}</td>
-        <td><span class="badge ${r.estado}">${r.estado}</span></td>
+        <td><span class="badge ${estado}">${estadoFmt}</span></td>
         <td>${coords}</td>
       </tr>
     `;
@@ -195,7 +486,7 @@ function aplicarFiltros() {
 }
 
 document.getElementById('btnExport').addEventListener('click', () => {
-  if (!ALL_REGISTROS.length) return alert('No hay datos.');
+  if (!ALL_REGISTROS.length) return alert('No hay datos disponibles para exportar.');
 
   const encabezados = ['Folio', 'Fecha', 'Colonia', 'Dirección', 'Referencia', 'Categoría', 'Descripción', 'Estado', 'Coordenadas GPS'];
   const filas = ALL_REGISTROS.map(r => {
@@ -204,12 +495,12 @@ document.getElementById('btnExport').addEventListener('click', () => {
     return [
       folio,
       d.toLocaleDateString('es-MX'),
-      `"${r.colonia}"`,
-      `"${r.direccion}"`,
-      `"${r.referencia || ''}"`,
-      `"${r.tipo}"`,
-      `"${r.descripcion}"`,
-      r.estado,
+      `"${(r.colonia || '').replace(/"/g, '""')}"`,
+      `"${(r.direccion || '').replace(/"/g, '""')}"`,
+      `"${(r.referencia || '').replace(/"/g, '""')}"`,
+      `"${r.tipo || ''}"`,
+      `"${(r.descripcion || '').replace(/"/g, '""')}"`,
+      r.estado || 'pendiente',
       `"${r.lat || ''}, ${r.lng || ''}"`
     ].join(',');
   });
@@ -218,7 +509,7 @@ document.getElementById('btnExport').addEventListener('click', () => {
   const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `reporte_global_administracion_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `reporte_global_admin_pan_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 });
 </script>
