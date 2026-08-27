@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
-<title>REGISTRO DE ACTIVIDADES EN TU COLONIA 2026 - Registro de Mejoras Urbanas</title>
+<title>MEJORAS EN TU COLONIA 2026 — Control de mejoras urbanas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -398,9 +398,10 @@
     }
     #formNuevo .field:nth-child(1),
     #formNuevo .field:nth-child(2),
-    #formNuevo .field:nth-child(4),
+    #formNuevo .field:nth-child(3),
     #formNuevo .field:nth-child(5),
     #formNuevo .field:nth-child(6),
+    #formNuevo .field:nth-child(7),
     #formNuevo button[type="submit"] {
       grid-column: span 2;
     }
@@ -427,7 +428,7 @@
         <text x="50" y="63" font-family="'Oswald', sans-serif" font-weight="700" font-size="35" fill="#FFFFFF" text-anchor="middle" letter-spacing="-1">PAN</text>
       </svg>
       <div>
-        <h1>REGISTRO DE ACTIVIDADES EN TU COLONIA 2026</h1>
+        <h1>MEJORAS EN TU COLONIA 2026</h1>
         <p class="brand-sub" id="brandSub">cargando registros…</p>
       </div>
     </div>
@@ -502,7 +503,7 @@ function toast(msg){
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toast._h);
-  toast._h = setTimeout(()=>t.classList.remove('show'), 2600);
+  toast._h = setTimeout(()=>t.classList.remove('show'), 3500);
 }
 function escapeHtml(s){
   return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -561,7 +562,7 @@ function descargarRespaldoExcel() {
     return;
   }
 
-  const encabezados = ['Folio', 'Fecha', 'Mes', 'Colonia', 'Dirección', 'Referencia', 'Categoría / Tipo', 'Descripción', 'Estado', 'Coordenadas GPS', 'Dirección Geolocalizada'];
+  const encabezados = ['Folio', 'Fecha', 'Mes', 'Nombre / Brigadista', 'Colonia', 'Dirección', 'Referencia', 'Categoría / Tipo', 'Descripción', 'Estado', 'Coordenadas GPS', 'Dirección Geolocalizada'];
   const filas = STATE.registros.map(r => {
     const d = new Date(r.fechaCreacion);
     const fechaFmt = d.toLocaleDateString('es-MX');
@@ -572,6 +573,7 @@ function descargarRespaldoExcel() {
       folioOf(r),
       fechaFmt,
       mesFmt,
+      `"${(r.nombre || '').replace(/"/g, '""')}"`,
       `"${(r.colonia || '').replace(/"/g, '""')}"`,
       `"${(r.direccion || '').replace(/"/g, '""')}"`,
       `"${(r.referencia || '').replace(/"/g, '""')}"`,
@@ -672,9 +674,16 @@ function renderNuevo(){
     '</button>'
   )).join('');
 
+  // Auto-llenar el nombre si el brigadista ya lo había puesto antes
+  const nombreGuardado = localStorage.getItem('pan_nombre_brigadista') || '';
+
   el('main').innerHTML =
     '<h2 class="section-title">Nuevo registro</h2>' +
     '<form id="formNuevo">' +
+      '<div class="field" style="border: 2px solid var(--pan-cyan); padding: 10px; border-radius: 8px; background: rgba(0, 194, 255, 0.05);">' +
+        '<label for="fNombre" style="color: var(--pan-cyan);">Tu Nombre / Brigadista (*Obligatorio)</label>' +
+        '<input type="text" id="fNombre" value="'+escapeHtml(nombreGuardado)+'" placeholder="Escribe tu nombre para validar el reporte..." required autocomplete="name">' +
+      '</div>' +
       '<div class="field">' +
         '<label for="fColonia">Colonia</label>' +
         '<input type="text" id="fColonia" list="listaColonias" placeholder="Ej. Reforma, Centro…" required autocomplete="off">' +
@@ -823,16 +832,26 @@ function renderNuevo(){
   el('formNuevo').addEventListener('submit', async (ev)=>{
     ev.preventDefault();
     if(!STATE.nuevo.tipo){ toast('Selecciona el tipo de mejora.'); return; }
+    
+    // Obtener los valores del formulario
+    const nombre = el('fNombre').value.trim();
     const colonia = el('fColonia').value.trim();
     const direccion = el('fDireccion').value.trim();
     const referencia = el('fReferencia').value.trim();
     const descripcion = el('fDesc').value.trim();
     const estado = el('fEstado').value;
     const tipoOtro = el('fOtroDesc') ? el('fOtroDesc').value.trim() : '';
+    
+    // Candado estricto para Nombre
+    if(!nombre){ toast('Es obligatorio ingresar tu nombre para guardar el reporte.'); return; }
     if(!colonia || !direccion || !descripcion){ toast('Completa colonia, ubicación y descripción.'); return; }
+
+    // Guardar el nombre en el celular para el próximo reporte (Auto-llenado)
+    localStorage.setItem('pan_nombre_brigadista', nombre);
 
     const record = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+      nombre, // Aquí se envía a Firebase
       colonia, direccion, referencia, descripcion, estado,
       tipo: STATE.nuevo.tipo,
       tipoOtro: STATE.nuevo.tipo === 'otro' ? tipoOtro : '',
@@ -855,8 +874,10 @@ function renderNuevo(){
       if(!record.foto) faltantes.push('foto');
       if(!record.lat) faltantes.push('ubicación GPS');
       toast(faltantes.length
-        ? 'Registro guardado ✓ — para mejor control, la próxima vez agrega: ' + faltantes.join(', ') + '.'
-        : 'Registro guardado ✓');
+        ? 'Reporte guardado en la nube ✓ — El próximo intenta agregar: ' + faltantes.join(', ') + '.'
+        : 'Reporte guardado exitosamente en la nube ✓');
+      
+      // Limpia el formulario (pero respeta el auto-llenado del nombre)
       renderNuevo();
     }else{
       toast('No se pudo guardar (' + result.error + '). Tus datos siguen en el formulario, intenta de nuevo.');
@@ -875,11 +896,12 @@ function registroCardHtml(r){
   const cat = CAT_MAP[r.tipo] || CAT_MAP.otro;
   const estadoLabel = (ESTADOS.find(e=>e.id===r.estado) || ESTADOS[0]).label;
   const searchBlob = (r.colonia+' '+r.direccion+' '+r.descripcion+' '+tipoLabel(r)).toLowerCase();
+  
   return (
     '<div class="ticket" data-id="'+r.id+'" data-colonia="'+escapeHtml(r.colonia)+'" data-estado="'+r.estado+'" data-search="'+escapeHtml(searchBlob)+'">' +
       '<div class="t-body">' +
         '<div class="t-top">' +
-          '<div><div class="t-colonia">'+escapeHtml(r.colonia)+'</div><div class="t-folio">'+folioOf(r)+'</div></div>' +
+          '<div><div class="t-colonia">'+escapeHtml(r.colonia)+'</div><div class="t-folio">'+folioOf(r)+' — '+escapeHtml(r.nombre || 'Sin nombre')+'</div></div>' +
           '<div class="stamp '+r.estado+'"><span class="dot"></span>'+estadoLabel+'</div>' +
         '</div>' +
         '<div class="t-media">' +
@@ -1148,7 +1170,9 @@ async function generarInforme(){
       const descLines = doc.splitTextToSize('Descripción: ' + r.descripcion, textW);
       doc.text(descLines, textX, ty); ty += descLines.length * 12 + 3;
       doc.setTextColor(120); doc.setFontSize(9);
-      doc.text('Registrado: ' + fmtDateTimeShort(r.fechaCreacion), textX, ty);
+      
+      // Mostrar el nombre del brigadista en el PDF
+      doc.text('Reportado por: ' + (r.nombre || 'Sin nombre') + '  ·  ' + fmtDateTimeShort(r.fechaCreacion), textX, ty);
       doc.setTextColor(20);
       ty += 10;
 
