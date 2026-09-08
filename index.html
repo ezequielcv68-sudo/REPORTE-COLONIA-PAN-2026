@@ -13,6 +13,7 @@
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
 <style>
@@ -76,6 +77,9 @@
     top: 0;
     z-index: 20;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   .brand { display: flex; align-items: center; gap: 12px; }
   .pan-emblem { width: 38px; height: 38px; flex-shrink: 0; }
@@ -95,6 +99,18 @@
     color: var(--ink-soft);
     font-family: var(--font-mono);
     font-weight: 600;
+  }
+  .btn-logout-brigadista {
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 10.5px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
   }
 
   main { flex: 1; padding: 16px 14px 96px; }
@@ -203,6 +219,8 @@
     font-family: var(--font-display);
   }
   .field input[type=text],
+  .field input[type=email],
+  .field input[type=password],
   .field input[type=date],
   .field textarea,
   .field select {
@@ -309,7 +327,6 @@
   .t-colonia { font-family: var(--font-display); font-weight: 700; font-size: 16px; text-transform: uppercase; color: var(--pan-blue-dark); }
   .t-folio { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); margin-top: 2px; }
   
-  /* Media de Fotos (Antes y Después) */
   .t-media-wrap { display: flex; gap: 8px; overflow-x: auto; }
   .t-media-item { position: relative; display: flex; flex-direction: column; align-items: center; }
   .t-media-tag { position: absolute; top: 4px; left: 4px; background: rgba(0,27,84,0.85); color: #FFF; font-size: 9px; padding: 2px 6px; border-radius: 3px; font-family: var(--font-display); }
@@ -359,17 +376,39 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
 
-  .report-select-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px;
-    border: 1.5px solid var(--line-dark); border-radius: var(--radius);
-    margin-bottom: 8px; background: var(--bg-panel);
+  .auth-card {
+    background: var(--bg-panel);
+    border: 2px solid var(--pan-cyan);
+    border-radius: 12px;
+    padding: 24px 20px;
+    margin: 30px 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   }
-  .report-select-item input[type=checkbox] { width: 19px; height: 19px; accent-color: var(--pan-blue-light); flex-shrink: 0; }
-  .report-select-item .rt-thumb { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; flex-shrink: 0; background: var(--bg-panel-2); }
-  .report-select-item .rt-info { flex: 1; min-width: 0; }
-  .report-select-item .rt-colonia { font-size: 13px; font-weight: 600; }
-  .report-select-item .rt-tipo { font-size: 11.5px; color: rgba(255,255,255,.5); }
+  .auth-card h3 {
+    font-family: var(--font-display);
+    color: var(--pan-cyan);
+    margin: 0 0 6px;
+    font-size: 20px;
+    text-transform: uppercase;
+  }
+  .auth-card p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    margin: 0 0 16px;
+  }
+  .auth-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--pan-cyan);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 14px;
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
 
   .summary-bar {
     display: flex; justify-content: space-between; align-items: center;
@@ -453,6 +492,7 @@
         <p class="brand-sub" id="brandSub">cargando registros…</p>
       </div>
     </div>
+    <button id="btnLogoutBrigadista" class="btn-logout-brigadista hidden">Salir</button>
   </header>
 
   <main id="main"></main>
@@ -488,6 +528,7 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.firestore();
 
 const CATS = [
@@ -510,6 +551,7 @@ const ESTADOS = [
 const STATE = {
   view:'nuevo',
   registros:[],
+  user: null,
   loaded:false,
   nuevo:{ foto:null, lat:null, lng:null, tipo:null, direccionGeo:null, _geoToken:0 },
   filtroColonia:'',
@@ -548,26 +590,128 @@ function folioOf(r){
   return 'F-'+yy+mm+dd+'-'+r.id.slice(-4).toUpperCase();
 }
 
-function actualizarMetricasHeader(){
-  const nombreGuardado = localStorage.getItem('pan_nombre_brigadista') || '';
-  if(!nombreGuardado){
-    const nColonias = new Set(STATE.registros.map(r=>r.colonia)).size;
-    el('brandSub').textContent = STATE.registros.length
-      ? STATE.registros.length + ' registro(s) en nube · ' + nColonias + ' colonia(s)'
-      : 'sin registros aún — comienza por "Nuevo"';
-    return;
+// Observador de Estado de Autenticación
+auth.onAuthStateChanged(async (user) => {
+  STATE.user = user;
+  const btnLogout = el('btnLogoutBrigadista');
+  if(user){
+    btnLogout.classList.remove('hidden');
+    if(!STATE.loaded){
+      STATE.registros = await loadAllRegistros();
+      STATE.loaded = true;
+    }
+    actualizarMetricasHeader();
+    setTab(STATE.view);
+  } else {
+    btnLogout.classList.add('hidden');
+    el('brandSub').textContent = 'Acceso de Brigadista';
+    renderLoginBrigadista('login');
   }
+});
+
+el('btnLogoutBrigadista').addEventListener('click', () => auth.signOut());
+
+function actualizarMetricasHeader(){
+  if(!STATE.user) return;
+  const nombreBrigadista = STATE.user.displayName || STATE.user.email.split('@')[0];
   const now = new Date();
   const mesActual = now.getMonth();
   const anioActual = now.getFullYear();
+  
   const countMes = STATE.registros.filter(r => {
-    if(!r.nombre) return false;
-    if(r.nombre.trim().toLowerCase() !== nombreGuardado.trim().toLowerCase()) return false;
+    if(r.uid !== STATE.user.uid) return false;
     const d = new Date(r.fechaCreacion);
     return d.getMonth() === mesActual && d.getFullYear() === anioActual;
   }).length;
 
-  el('brandSub').textContent = `Hola, ${nombreGuardado} · ${countMes} reporte(s) este mes`;
+  el('brandSub').textContent = `Hola, ${nombreBrigadista} · ${countMes} reporte(s) este mes`;
+}
+
+function renderLoginBrigadista(mode = 'login'){
+  if(mode === 'login'){
+    el('main').innerHTML = `
+      <div class="auth-card">
+        <h3>Acceso Brigadista</h3>
+        <p>Ingresa tus credenciales autorizadas para sincronizar tus reportes en la nube.</p>
+        <form id="formLoginBrigadista">
+          <div class="field">
+            <label for="bEmail">Correo Electrónico</label>
+            <input type="email" id="bEmail" placeholder="tu.correo@pan.org.mx" required autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="bPass">Contraseña</label>
+            <input type="password" id="bPass" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top:10px;">Iniciar Sesión</button>
+        </form>
+        <button class="auth-toggle-btn" id="btnGoRegister">¿Eres nuevo brigadista? Crear cuenta aquí ↗</button>
+      </div>
+    `;
+
+    el('formLoginBrigadista').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = el('bEmail').value.trim();
+      const pass = el('bPass').value;
+      try {
+        toast('Verificando acceso…');
+        await auth.signInWithEmailAndPassword(email, pass);
+        toast('¡Sesión iniciada con éxito! ✓');
+      } catch(err) {
+        toast('Error de acceso: ' + err.message);
+      }
+    });
+
+    el('btnGoRegister').addEventListener('click', () => renderLoginBrigadista('register'));
+
+  } else {
+
+    el('main').innerHTML = `
+      <div class="auth-card">
+        <h3>Crear Cuenta de Brigadista</h3>
+        <p>Regístrate para validar la autoría de tus reportes urbanos.</p>
+        <form id="formRegisterBrigadista">
+          <div class="field">
+            <label for="bNombreReg">Tu Nombre Completo / Brigadista</label>
+            <input type="text" id="bNombreReg" placeholder="Ej. Ezequiel Carrillo Vázquez" required autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="bEmailReg">Correo Electrónico</label>
+            <input type="email" id="bEmailReg" placeholder="tu.correo@pan.org.mx" required autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="bPassReg">Contraseña (Mínimo 6 caracteres)</label>
+            <input type="password" id="bPassReg" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top:10px;">Registrarme e Iniciar</button>
+        </form>
+        <button class="auth-toggle-btn" id="btnGoLogin">¿Ya tienes cuenta? Iniciar sesión aquí ↗</button>
+      </div>
+    `;
+
+    el('formRegisterBrigadista').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nombre = el('bNombreReg').value.trim();
+      const email = el('bEmailReg').value.trim();
+      const pass = el('bPassReg').value;
+
+      if(!nombre) { toast('Por favor ingresa tu nombre completo.'); return; }
+
+      try {
+        toast('Creando cuenta de brigadista…');
+        const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+        await userCred.user.updateProfile({ displayName: nombre });
+        await auth.currentUser.reload();
+        STATE.user = auth.currentUser;
+        toast('¡Registro exitoso! Bienvenido ' + nombre + ' ✓');
+        actualizarMetricasHeader();
+        setTab('nuevo');
+      } catch(err) {
+        toast('Error al registrar: ' + err.message);
+      }
+    });
+
+    el('btnGoLogin').addEventListener('click', () => renderLoginBrigadista('login'));
+  }
 }
 
 async function loadAllRegistros(){
@@ -771,6 +915,8 @@ function parseUbicacionTexto(texto){
 }
 
 function renderNuevo(){
+  if(!STATE.user){ renderLoginBrigadista('login'); return; }
+
   const n = STATE.nuevo;
   const cats = CATS.map(c => (
     '<button type="button" class="cat-btn '+(n.tipo===c.id?'active':'')+'" data-cat="'+c.id+'">'+
@@ -778,14 +924,14 @@ function renderNuevo(){
     '</button>'
   )).join('');
 
-  const nombreGuardado = localStorage.getItem('pan_nombre_brigadista') || '';
+  const nombreBrigadista = (STATE.user && STATE.user.displayName) ? STATE.user.displayName : (STATE.user ? STATE.user.email.split('@')[0] : '');
 
   el('main').innerHTML =
     '<h2 class="section-title">Nuevo registro</h2>' +
     '<form id="formNuevo">' +
       '<div class="field" style="border: 2px solid var(--pan-cyan); padding: 10px; border-radius: 8px; background: rgba(0, 194, 255, 0.05);">' +
-        '<label for="fNombre" style="color: var(--pan-cyan);">Tu Nombre / Brigadista (*Obligatorio)</label>' +
-        '<input type="text" id="fNombre" value="'+escapeHtml(nombreGuardado)+'" placeholder="Escribe tu nombre para validar el reporte..." required autocomplete="name">' +
+        '<label for="fNombre" style="color: var(--pan-cyan);">Tu Nombre / Brigadista (*Autenticado)</label>' +
+        '<input type="text" id="fNombre" value="'+escapeHtml(nombreBrigadista)+'" readonly style="opacity:0.8; cursor:not-allowed;">' +
       '</div>' +
       '<div class="field">' +
         '<label for="fColonia">Colonia</label>' +
@@ -837,7 +983,7 @@ function renderNuevo(){
         '</select>' +
       '</div>' +
       '<div class="field">' +
-        '<label for="fDesc">Descripción de lo identified</label>' +
+        '<label for="fDesc">Descripción de lo identificado</label>' +
         '<textarea id="fDesc" placeholder="Qué se detectó y qué se aplicará…" required></textarea>' +
       '</div>' +
       '<div class="field">' +
@@ -944,7 +1090,6 @@ function renderNuevo(){
     ev.preventDefault();
     if(!STATE.nuevo.tipo){ toast('Selecciona el tipo de mejora.'); return; }
     
-    const nombre = el('fNombre').value.trim();
     const colonia = el('fColonia').value.trim();
     const direccion = el('fDireccion').value.trim();
     const referencia = el('fReferencia').value.trim();
@@ -953,15 +1098,13 @@ function renderNuevo(){
     const prioridad = el('fPrioridad').value;
     const tipoOtro = el('fOtroDesc') ? el('fOtroDesc').value.trim() : '';
     
-    if(!nombre){ toast('Es obligatorio ingresar tu nombre para guardar el reporte.'); return; }
     if(!colonia || !direccion || !descripcion){ toast('Completa colonia, ubicación y descripción.'); return; }
-
-    localStorage.setItem('pan_nombre_brigadista', nombre);
 
     const ahora = Date.now();
     const record = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-      nombre,
+      uid: STATE.user.uid,
+      nombre: nombreBrigadista,
       colonia, direccion, referencia, descripcion, estado, prioridad,
       tipo: STATE.nuevo.tipo,
       tipoOtro: STATE.nuevo.tipo === 'otro' ? tipoOtro : '',
@@ -1054,6 +1197,8 @@ function registroCardHtml(r){
 }
 
 function renderRegistros(){
+  if(!STATE.user){ renderLoginBrigadista('login'); return; }
+
   const colonias = Array.from(new Set(STATE.registros.map(r=>r.colonia))).sort();
   el('main').innerHTML =
     '<h2 class="section-title">Registros</h2>' +
@@ -1170,6 +1315,8 @@ function aplicarFiltrosRegistros(){
 }
 
 function renderReportes(){
+  if(!STATE.user){ renderLoginBrigadista('login'); return; }
+
   const colonias = Array.from(new Set(STATE.registros.map(r=>r.colonia))).sort();
   el('main').innerHTML =
     '<h2 class="section-title">Generar informe</h2>' +
@@ -1463,9 +1610,6 @@ document.querySelectorAll('.tab-btn').forEach(b=>{
 
 async function init(){
   el('main').innerHTML = '<div class="loader"><span class="spin"></span> Cargando registros de la nube…</div>';
-  STATE.registros = await loadAllRegistros();
-  STATE.loaded = true;
-  actualizarMetricasHeader();
   setTab('nuevo');
 }
 init();
