@@ -562,42 +562,77 @@ function descargarRespaldoExcel() {
     return;
   }
 
-  const encabezados = ['Folio', 'Fecha', 'Mes', 'Nombre / Brigadista', 'Colonia', 'Dirección', 'Referencia', 'Categoría / Tipo', 'Descripción', 'Estado', 'Última Modificación', 'Coordenadas GPS', 'Dirección Geolocalizada'];
-  const filas = STATE.registros.map(r => {
+  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+  <head>
+    <meta charset="UTF-8">
+    <style>
+      table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt; }
+      th { background-color: #002B7F; color: #FFFFFF; font-weight: bold; border: 1px solid #001B54; padding: 8px; text-align: center; }
+      td { border: 1px solid #CCCCCC; padding: 6px; text-align: left; vertical-align: middle; }
+      .bold { font-weight: bold; }
+      .center { text-align: center; }
+    </style>
+  </head>
+  <body>
+    <table>
+      <thead>
+        <tr>
+          <th>Folio</th>
+          <th>Fecha Registro</th>
+          <th>Fecha Ejecución (En proceso)</th>
+          <th>Fecha Concretado (Aplicado)</th>
+          <th>Brigadista</th>
+          <th>Colonia</th>
+          <th>Dirección</th>
+          <th>Referencia</th>
+          <th>Categoría</th>
+          <th>Descripción</th>
+          <th>Estado</th>
+          <th>Coordenadas GPS</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  STATE.registros.forEach(r => {
     const d = new Date(r.fechaCreacion);
-    const fechaFmt = d.toLocaleDateString('es-MX');
-    const mesFmt = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
-    const coords = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : 'Sin GPS';
-    const fechaAct = r.fechaActualizacion ? fmtDateTimeShort(r.fechaActualizacion) : 'Sin cambios';
+    const fReg = `${d.toLocaleDateString('es-MX')} ${d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}`;
     
-    return [
-      folioOf(r),
-      fechaFmt,
-      mesFmt,
-      `"${(r.nombre || '').replace(/"/g, '""')}"`,
-      `"${(r.colonia || '').replace(/"/g, '""')}"`,
-      `"${(r.direccion || '').replace(/"/g, '""')}"`,
-      `"${(r.referencia || '').replace(/"/g, '""')}"`,
-      `"${tipoLabel(r).replace(/"/g, '""')}"`,
-      `"${(r.descripcion || '').replace(/"/g, '""')}"`,
-      r.estado,
-      `"${fechaAct}"`,
-      `"${coords}"`,
-      `"${(r.direccionGeo || '').replace(/"/g, '""')}"`
-    ].join(',');
+    const dIni = r.fechaEnProceso ? new Date(r.fechaEnProceso) : null;
+    const fIni = dIni ? `${dIni.toLocaleDateString('es-MX')} ${dIni.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}` : 'N/A';
+    
+    const dFin = r.fechaAplicado ? new Date(r.fechaAplicado) : null;
+    const fFin = dFin ? `${dFin.toLocaleDateString('es-MX')} ${dFin.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}` : 'N/A';
+
+    const coords = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : 'Sin GPS';
+
+    html += `<tr>
+      <td class="bold center">${folioOf(r)}</td>
+      <td>${fReg}</td>
+      <td>${fIni}</td>
+      <td>${fFin}</td>
+      <td class="bold">${escapeHtml(r.nombre || 'Sin nombre')}</td>
+      <td class="bold">${escapeHtml(r.colonia || '')}</td>
+      <td>${escapeHtml(r.direccion || '')}</td>
+      <td>${escapeHtml(r.referencia || '')}</td>
+      <td>${escapeHtml(tipoLabel(r))}</td>
+      <td>${escapeHtml(r.descripcion || '')}</td>
+      <td class="center bold">${(r.estado || 'pendiente').toUpperCase()}</td>
+      <td>${coords}</td>
+    </tr>`;
   });
 
-  const contenidoCSV = '\uFEFF' + [encabezados.join(','), ...filas].join('\n');
-  const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+  html += `</tbody></table></body></html>`;
+
+  const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `respaldo_mejoras_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `respaldo_mejoras_${new Date().toISOString().slice(0,10)}.xls`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  toast('Respaldo en Excel descargado ✓');
+  toast('Respaldo estilizado descargado ✓');
 }
 
 function compressImage(file, maxWidth, quality){
@@ -676,7 +711,6 @@ function renderNuevo(){
     '</button>'
   )).join('');
 
-  // Auto-llenar el nombre si el brigadista ya lo había puesto antes
   const nombreGuardado = localStorage.getItem('pan_nombre_brigadista') || '';
 
   el('main').innerHTML =
@@ -835,7 +869,6 @@ function renderNuevo(){
     ev.preventDefault();
     if(!STATE.nuevo.tipo){ toast('Selecciona el tipo de mejora.'); return; }
     
-    // Obtener los valores del formulario
     const nombre = el('fNombre').value.trim();
     const colonia = el('fColonia').value.trim();
     const direccion = el('fDireccion').value.trim();
@@ -844,23 +877,24 @@ function renderNuevo(){
     const estado = el('fEstado').value;
     const tipoOtro = el('fOtroDesc') ? el('fOtroDesc').value.trim() : '';
     
-    // Candado estricto para Nombre
     if(!nombre){ toast('Es obligatorio ingresar tu nombre para guardar el reporte.'); return; }
     if(!colonia || !direccion || !descripcion){ toast('Completa colonia, ubicación y descripción.'); return; }
 
-    // Guardar el nombre en el celular para el próximo reporte (Auto-llenado)
     localStorage.setItem('pan_nombre_brigadista', nombre);
 
+    const ahora = Date.now();
     const record = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-      nombre, // Aquí se envía a Firebase
+      nombre,
       colonia, direccion, referencia, descripcion, estado,
       tipo: STATE.nuevo.tipo,
       tipoOtro: STATE.nuevo.tipo === 'otro' ? tipoOtro : '',
       foto: STATE.nuevo.foto || null,
       lat: STATE.nuevo.lat, lng: STATE.nuevo.lng,
       direccionGeo: STATE.nuevo.direccionGeo || null,
-      fechaCreacion: Date.now(),
+      fechaCreacion: ahora,
+      fechaEnProceso: estado === 'en_proceso' ? ahora : null,
+      fechaAplicado: estado === 'aplicado' ? ahora : null
     };
 
     const submitBtn = ev.target.querySelector('button[type=submit]');
@@ -879,7 +913,6 @@ function renderNuevo(){
         ? 'Reporte guardado en la nube ✓ — El próximo intenta agregar: ' + faltantes.join(', ') + '.'
         : 'Reporte guardado exitosamente en la nube ✓');
       
-      // Limpia el formulario (pero respeta el auto-llenado del nombre)
       renderNuevo();
     }else{
       toast('No se pudo guardar (' + result.error + '). Tus datos siguen en el formulario, intenta de nuevo.');
@@ -899,10 +932,13 @@ function registroCardHtml(r){
   const estadoLabel = (ESTADOS.find(e=>e.id===r.estado) || ESTADOS[0]).label;
   const searchBlob = (r.colonia+' '+r.direccion+' '+r.descripcion+' '+tipoLabel(r)).toLowerCase();
   
-  // Mostrar la fecha de modificación únicamente si existe cambio registrado
-  const textoModificacion = r.fechaActualizacion 
-    ? '<br><span style="font-size:10px; color:var(--ink-soft); display:block; margin-top:2px;">Mod: ' + fmtDateTimeShort(r.fechaActualizacion) + '</span>' 
-    : '';
+  let txtTrazabilidad = '';
+  if (r.fechaEnProceso) {
+    txtTrazabilidad += `<br><span style="font-size:10px; color:var(--amber); display:block; margin-top:2px;">Iniciado: ${fmtDateTimeShort(r.fechaEnProceso)}</span>`;
+  }
+  if (r.fechaAplicado) {
+    txtTrazabilidad += `<span style="font-size:10px; color:var(--green); font-weight:600; display:block;">Concretado: ${fmtDateTimeShort(r.fechaAplicado)}</span>`;
+  }
 
   return (
     '<div class="ticket" data-id="'+r.id+'" data-colonia="'+escapeHtml(r.colonia)+'" data-estado="'+r.estado+'" data-search="'+escapeHtml(searchBlob)+'">' +
@@ -919,7 +955,7 @@ function registroCardHtml(r){
           '</div>' +
         '</div>' +
         '<div class="t-meta">' +
-          '<span class="t-date">'+fmtDateTimeShort(r.fechaCreacion) + textoModificacion + '</span>' +
+          '<span class="t-date">'+fmtDateTimeShort(r.fechaCreacion) + txtTrazabilidad + '</span>' +
           '<div class="t-actions">' +
             '<button data-act="ciclo" data-id="'+r.id+'">Cambiar estado</button>' +
             '<button data-act="borrar" data-id="'+r.id+'" class="danger">Eliminar</button>' +
@@ -971,9 +1007,17 @@ function renderRegistros(){
       const order = ['pendiente','en_proceso','aplicado'];
       r.estado = order[(order.indexOf(r.estado)+1) % order.length];
       
-      // Registrar automáticamente la fecha y hora de la actualización
-      r.fechaActualizacion = Date.now();
-      
+      const ahora = Date.now();
+      if (r.estado === 'en_proceso') {
+        if (!r.fechaEnProceso) r.fechaEnProceso = ahora;
+      } else if (r.estado === 'aplicado') {
+        if (!r.fechaEnProceso) r.fechaEnProceso = ahora;
+        r.fechaAplicado = ahora;
+      } else if (r.estado === 'pendiente') {
+        r.fechaEnProceso = null;
+        r.fechaAplicado = null;
+      }
+
       const result = await saveRegistro(r);
       if(result.ok){ toast('Estado actualizado ✓'); renderRegistros(); }
       else toast('No se pudo actualizar el estado (' + result.error + ').');
@@ -1028,7 +1072,7 @@ function renderReportes(){
         }).join('') +
       '</div>' +
       '<button class="btn btn-primary" id="btnGenerarInforme" type="button" style="margin-top:6px;">' + iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>') + 'Generar informe (PDF)</button>' +
-      '<button class="btn btn-secondary" id="btnExportarExcel" type="button" style="margin-top:10px;">' + iconSvg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>') + 'Descargar respaldo completo (Excel / CSV)</button>'
+      '<button class="btn btn-secondary" id="btnExportarExcel" type="button" style="margin-top:10px;">' + iconSvg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>') + 'Descargar respaldo completo (Excel)</button>'
     ) :
       '<div class="empty-state">'+iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>')+
       '<p>Todavía no hay registros para incluir en un informe.<br>Agrega uno desde la pestaña "Nuevo".</p></div>'
@@ -1182,7 +1226,6 @@ async function generarInforme(){
       doc.text(descLines, textX, ty); ty += descLines.length * 12 + 3;
       doc.setTextColor(120); doc.setFontSize(9);
       
-      // Mostrar el nombre del brigadista en el PDF
       doc.text('Reportado por: ' + (r.nombre || 'Sin nombre') + '  ·  ' + fmtDateTimeShort(r.fechaCreacion), textX, ty);
       doc.setTextColor(20);
       ty += 10;
