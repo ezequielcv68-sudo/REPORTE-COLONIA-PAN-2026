@@ -562,12 +562,13 @@ function descargarRespaldoExcel() {
     return;
   }
 
-  const encabezados = ['Folio', 'Fecha', 'Mes', 'Nombre / Brigadista', 'Colonia', 'Dirección', 'Referencia', 'Categoría / Tipo', 'Descripción', 'Estado', 'Coordenadas GPS', 'Dirección Geolocalizada'];
+  const encabezados = ['Folio', 'Fecha', 'Mes', 'Nombre / Brigadista', 'Colonia', 'Dirección', 'Referencia', 'Categoría / Tipo', 'Descripción', 'Estado', 'Última Modificación', 'Coordenadas GPS', 'Dirección Geolocalizada'];
   const filas = STATE.registros.map(r => {
     const d = new Date(r.fechaCreacion);
     const fechaFmt = d.toLocaleDateString('es-MX');
     const mesFmt = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
     const coords = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : 'Sin GPS';
+    const fechaAct = r.fechaActualizacion ? fmtDateTimeShort(r.fechaActualizacion) : 'Sin cambios';
     
     return [
       folioOf(r),
@@ -580,6 +581,7 @@ function descargarRespaldoExcel() {
       `"${tipoLabel(r).replace(/"/g, '""')}"`,
       `"${(r.descripcion || '').replace(/"/g, '""')}"`,
       r.estado,
+      `"${fechaAct}"`,
       `"${coords}"`,
       `"${(r.direccionGeo || '').replace(/"/g, '""')}"`
     ].join(',');
@@ -897,6 +899,11 @@ function registroCardHtml(r){
   const estadoLabel = (ESTADOS.find(e=>e.id===r.estado) || ESTADOS[0]).label;
   const searchBlob = (r.colonia+' '+r.direccion+' '+r.descripcion+' '+tipoLabel(r)).toLowerCase();
   
+  // Mostrar la fecha de modificación únicamente si existe cambio registrado
+  const textoModificacion = r.fechaActualizacion 
+    ? '<br><span style="font-size:10px; color:var(--ink-soft); display:block; margin-top:2px;">Mod: ' + fmtDateTimeShort(r.fechaActualizacion) + '</span>' 
+    : '';
+
   return (
     '<div class="ticket" data-id="'+r.id+'" data-colonia="'+escapeHtml(r.colonia)+'" data-estado="'+r.estado+'" data-search="'+escapeHtml(searchBlob)+'">' +
       '<div class="t-body">' +
@@ -912,7 +919,7 @@ function registroCardHtml(r){
           '</div>' +
         '</div>' +
         '<div class="t-meta">' +
-          '<span class="t-date">'+fmtDateTimeShort(r.fechaCreacion)+'</span>' +
+          '<span class="t-date">'+fmtDateTimeShort(r.fechaCreacion) + textoModificacion + '</span>' +
           '<div class="t-actions">' +
             '<button data-act="ciclo" data-id="'+r.id+'">Cambiar estado</button>' +
             '<button data-act="borrar" data-id="'+r.id+'" class="danger">Eliminar</button>' +
@@ -963,6 +970,10 @@ function renderRegistros(){
       if(!r) return;
       const order = ['pendiente','en_proceso','aplicado'];
       r.estado = order[(order.indexOf(r.estado)+1) % order.length];
+      
+      // Registrar automáticamente la fecha y hora de la actualización
+      r.fechaActualizacion = Date.now();
+      
       const result = await saveRegistro(r);
       if(result.ok){ toast('Estado actualizado ✓'); renderRegistros(); }
       else toast('No se pudo actualizar el estado (' + result.error + ').');
