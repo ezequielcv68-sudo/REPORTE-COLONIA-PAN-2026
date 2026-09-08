@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<!-- Librería ExcelJS para tablas nativas .xlsx con bordes y sin colores -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
 <!-- Firebase SDKs -->
@@ -161,7 +160,7 @@
   .link-foto {
     background: none; border: none; color: var(--pan-blue-light);
     font-weight: 600; cursor: pointer; text-decoration: underline;
-    padding: 0; font-size: 13px; font-family: var(--font-body);
+    padding: 0; font-size: 12px; font-family: var(--font-body);
   }
 
   .img-modal-overlay {
@@ -218,6 +217,14 @@
   .badge.pendiente { background: #FFE6E6; color: #C23B3B; border: 1px solid #FFB3B3; }
   .badge.en_proceso { background: #FFF4E5; color: #B9790A; border: 1px solid #FFE0B2; }
   .badge.aplicado { background: #E6F4EA; color: #2F7A4F; border: 1px solid #A3E2B8; }
+
+  .badge-prio {
+    font-family: var(--font-display); font-size: 10px; font-weight: 700;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 4px; display: inline-block;
+  }
+  .badge-prio.alta { background: #FFE6E6; color: #C23B3B; border: 1px solid #FFB3B3; }
+  .badge-prio.media { background: #FFF4E5; color: #B9790A; border: 1px solid #FFE0B2; }
+  .badge-prio.baja { background: #EBF8FF; color: #00A3E0; border: 1px solid #BEE3F8; }
 
   .map-link { color: var(--pan-blue-light); font-weight: 600; text-decoration: none; }
   .map-link:hover { text-decoration: underline; }
@@ -279,7 +286,7 @@
       </div>
       <button class="btn-export" id="btnExport">
         <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        Descargar Excel
+        Descargar Excel (.xlsx)
       </button>
     </div>
 
@@ -294,6 +301,7 @@
               <th>Colonia</th>
               <th>Dirección / Referencia</th>
               <th>Tipo</th>
+              <th>Prioridad</th>
               <th>Descripción</th>
               <th>Estado</th>
               <th>Evidencia</th>
@@ -406,7 +414,7 @@ function formatearFolio(id, msFecha) {
 function renderTabla(registros) {
   const tbody = document.getElementById('tableBody');
   if (!registros.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#718096;">No hay registros para mostrar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:#718096;">No hay registros para mostrar.</td></tr>';
     return;
   }
 
@@ -416,7 +424,11 @@ function renderTabla(registros) {
     const coords = (r.lat && r.lng) ? `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" class="map-link">Ver en mapa ↗</a>` : '<span style="color:#A0AEC0;">Sin GPS</span>';
     const estado = r.estado || 'pendiente';
     const estadoFmt = estado.replace('_', ' ');
-    const btnEvidencia = r.foto ? `<button class="link-foto" onclick="abrirFoto('${r.id}')">Ver foto</button>` : '<span style="color:#A0AEC0;">Sin foto</span>';
+    const prio = r.prioridad || 'media';
+
+    let btnAntes = r.foto ? `<button class="link-foto" onclick="abrirFoto('${r.id}', 'antes')">Antes</button>` : '<span style="color:#A0AEC0;">Sin foto</span>';
+    let btnDespues = r.fotoDespues ? `<button class="link-foto" style="color:#2F7A4F;" onclick="abrirFoto('${r.id}', 'despues')">Después</button>` : '';
+    let btnEvidencia = btnAntes + (btnDespues ? ' | ' + btnDespues : '');
 
     let txtTrazabilidad = '';
     if (r.fechaEnProceso) {
@@ -436,6 +448,7 @@ function renderTabla(registros) {
         <td><b>${r.colonia}</b></td>
         <td>${r.direccion} ${r.referencia ? '<br><small style="color:#718096;">Ref: '+r.referencia+'</small>' : ''}</td>
         <td style="text-transform:capitalize;">${r.tipo}</td>
+        <td><span class="badge-prio ${prio}">${prio}</span></td>
         <td>${r.descripcion}</td>
         <td><span class="badge ${estado}">${estadoFmt}</span>${txtTrazabilidad}</td>
         <td>${btnEvidencia}</td>
@@ -445,19 +458,23 @@ function renderTabla(registros) {
   }).join('');
 }
 
-window.abrirFoto = function(id) {
+window.abrirFoto = function(id, tipo) {
   const registro = ALL_REGISTROS.find(r => r.id === id);
-  if (!registro || !registro.foto) return;
+  if (!registro) return;
+  const fotoSrc = tipo === 'despues' ? registro.fotoDespues : registro.foto;
+  if (!fotoSrc) return;
 
   const folio = formatearFolio(registro.id, registro.fechaCreacion);
+  const tagTexto = tipo === 'despues' ? 'Evidencia del Después' : 'Evidencia del Antes';
 
   const overlay = document.createElement('div');
   overlay.className = 'img-modal-overlay';
   overlay.innerHTML = `
     <div class="img-modal-content">
-      <img src="${registro.foto}" alt="Evidencia Folio ${folio}">
+      <div style="font-weight:700; color:var(--pan-blue); font-size:14px;">${tagTexto} — Folio ${folio}</div>
+      <img src="${fotoSrc}" alt="${tagTexto} Folio ${folio}">
       <div class="img-modal-actions">
-        <a href="${registro.foto}" download="evidencia_${folio}.jpg" class="btn-primary" style="width:auto; padding:8px 16px; text-decoration:none; display:inline-block;">Descargar</a>
+        <a href="${fotoSrc}" download="evidencia_${tipo}_${folio}.jpg" class="btn-primary" style="width:auto; padding:8px 16px; text-decoration:none; display:inline-block;">Descargar</a>
         <button class="btn-header danger" onclick="this.closest('.img-modal-overlay').remove()">Cerrar ventana</button>
       </div>
     </div>
@@ -502,8 +519,11 @@ document.getElementById('btnExport').addEventListener('click', async () => {
     { header: 'Dirección', key: 'direccion', width: 28 },
     { header: 'Referencia', key: 'referencia', width: 22 },
     { header: 'Categoría', key: 'categoria', width: 18 },
+    { header: 'Prioridad', key: 'prioridad', width: 15 },
     { header: 'Descripción', key: 'descripcion', width: 32 },
     { header: 'Estado', key: 'estado', width: 15 },
+    { header: 'Foto Antes', key: 'fotoAntes', width: 15 },
+    { header: 'Foto Después', key: 'fotoDespues', width: 15 },
     { header: 'Coordenadas GPS', key: 'coords', width: 22 }
   ];
 
@@ -530,8 +550,11 @@ document.getElementById('btnExport').addEventListener('click', async () => {
       direccion: r.direccion || '',
       referencia: r.referencia || '',
       categoria: r.tipo || '',
+      prioridad: (r.prioridad || 'media').toUpperCase(),
       descripcion: r.descripcion || '',
       estado: (r.estado || 'pendiente').toUpperCase(),
+      fotoAntes: r.foto ? 'Disponible' : 'Sin foto',
+      fotoDespues: r.fotoDespues ? 'Disponible' : 'Sin foto',
       coords: coords
     });
   });
@@ -543,7 +566,6 @@ document.getElementById('btnExport').addEventListener('click', async () => {
     right: { style: 'thin', color: { argb: 'FF808080' } }
   };
 
-  // Encabezados en negrita, sin color de fondo, bordes oscuros
   const headerRow = worksheet.getRow(1);
   headerRow.font = { name: 'Calibri', size: 11, bold: true };
   headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -556,7 +578,6 @@ document.getElementById('btnExport').addEventListener('click', async () => {
     };
   });
 
-  // Datos con bordes finos de estilo tabla, sin colores
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber > 1) {
       row.font = { name: 'Calibri', size: 11 };
