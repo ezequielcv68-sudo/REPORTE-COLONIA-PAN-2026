@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Librería para generación de Excel nativo .xlsx sin advertencias -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -562,38 +564,7 @@ function descargarRespaldoExcel() {
     return;
   }
 
-  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-  <head>
-    <meta charset="UTF-8">
-    <style>
-      table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt; }
-      th { background-color: #002B7F; color: #FFFFFF; font-weight: bold; border: 1px solid #001B54; padding: 8px; text-align: center; }
-      td { border: 1px solid #CCCCCC; padding: 6px; text-align: left; vertical-align: middle; }
-      .bold { font-weight: bold; }
-      .center { text-align: center; }
-    </style>
-  </head>
-  <body>
-    <table>
-      <thead>
-        <tr>
-          <th>Folio</th>
-          <th>Fecha Registro</th>
-          <th>Fecha Ejecución (En proceso)</th>
-          <th>Fecha Concretado (Aplicado)</th>
-          <th>Brigadista</th>
-          <th>Colonia</th>
-          <th>Dirección</th>
-          <th>Referencia</th>
-          <th>Categoría</th>
-          <th>Descripción</th>
-          <th>Estado</th>
-          <th>Coordenadas GPS</th>
-        </tr>
-      </thead>
-      <tbody>`;
-
-  STATE.registros.forEach(r => {
+  const datos = STATE.registros.map(r => {
     const d = new Date(r.fechaCreacion);
     const fReg = `${d.toLocaleDateString('es-MX')} ${d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}`;
     
@@ -605,34 +576,35 @@ function descargarRespaldoExcel() {
 
     const coords = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : 'Sin GPS';
 
-    html += `<tr>
-      <td class="bold center">${folioOf(r)}</td>
-      <td>${fReg}</td>
-      <td>${fIni}</td>
-      <td>${fFin}</td>
-      <td class="bold">${escapeHtml(r.nombre || 'Sin nombre')}</td>
-      <td class="bold">${escapeHtml(r.colonia || '')}</td>
-      <td>${escapeHtml(r.direccion || '')}</td>
-      <td>${escapeHtml(r.referencia || '')}</td>
-      <td>${escapeHtml(tipoLabel(r))}</td>
-      <td>${escapeHtml(r.descripcion || '')}</td>
-      <td class="center bold">${(r.estado || 'pendiente').toUpperCase()}</td>
-      <td>${coords}</td>
-    </tr>`;
+    return {
+      'Folio': folioOf(r),
+      'Fecha Registro': fReg,
+      'Fecha Ejecución (En proceso)': fIni,
+      'Fecha Concretado (Aplicado)': fFin,
+      'Brigadista': r.nombre || 'Sin nombre',
+      'Colonia': r.colonia || '',
+      'Dirección': r.direccion || '',
+      'Referencia': r.referencia || '',
+      'Categoría': tipoLabel(r),
+      'Descripción': r.descripcion || '',
+      'Estado': (r.estado || 'pendiente').toUpperCase(),
+      'Coordenadas GPS': coords
+    };
   });
 
-  html += `</tbody></table></body></html>`;
+  const ws = XLSX.utils.json_to_sheet(datos);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Respaldo");
 
-  const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `respaldo_mejoras_${new Date().toISOString().slice(0,10)}.xls`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  toast('Respaldo estilizado descargado ✓');
+  // Ajuste inteligente de ancho de columnas
+  ws['!cols'] = [
+    { wch: 18 }, { wch: 20 }, { wch: 22 }, { wch: 22 },
+    { wch: 22 }, { wch: 20 }, { wch: 25 }, { wch: 20 },
+    { wch: 16 }, { wch: 30 }, { wch: 15 }, { wch: 22 }
+  ];
+
+  XLSX.writeFile(wb, `respaldo_mejoras_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Respaldo oficial .xlsx descargado ✓');
 }
 
 function compressImage(file, maxWidth, quality){
@@ -1072,7 +1044,7 @@ function renderReportes(){
         }).join('') +
       '</div>' +
       '<button class="btn btn-primary" id="btnGenerarInforme" type="button" style="margin-top:6px;">' + iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>') + 'Generar informe (PDF)</button>' +
-      '<button class="btn btn-secondary" id="btnExportarExcel" type="button" style="margin-top:10px;">' + iconSvg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>') + 'Descargar respaldo completo (Excel)</button>'
+      '<button class="btn btn-secondary" id="btnExportarExcel" type="button" style="margin-top:10px;">' + iconSvg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>') + 'Descargar respaldo completo (.xlsx)</button>'
     ) :
       '<div class="empty-state">'+iconSvg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><polyline points="15,3 15,8 20,8"/>')+
       '<p>Todavía no hay registros para incluir en un informe.<br>Agrega uno desde la pestaña "Nuevo".</p></div>'
