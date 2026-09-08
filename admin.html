@@ -429,6 +429,10 @@ function renderTabla(registros) {
     const estadoFmt = estado.replace('_', ' ');
     const btnEvidencia = r.foto ? `<button class="link-foto" onclick="abrirFoto('${r.id}')">Ver foto</button>` : '<span style="color:#A0AEC0;">Sin foto</span>';
 
+    // Formatear fecha y hora de modificación solo si ha sufrido cambios de estado
+    const dAct = r.fechaActualizacion ? new Date(r.fechaActualizacion) : null;
+    const txtActualizacion = dAct ? `<br><small style="color:#718096; font-size:10.5px; display:block; margin-top:3px;">Mod: ${dAct.toLocaleDateString('es-MX')} ${dAct.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</small>` : '';
+
     return `
       <tr>
         <td><b>${folio}</b></td>
@@ -438,7 +442,7 @@ function renderTabla(registros) {
         <td>${r.direccion} ${r.referencia ? '<br><small style="color:#718096;">Ref: '+r.referencia+'</small>' : ''}</td>
         <td style="text-transform:capitalize;">${r.tipo}</td>
         <td>${r.descripcion}</td>
-        <td><span class="badge ${estado}">${estadoFmt}</span></td>
+        <td><span class="badge ${estado}">${estadoFmt}</span>${txtActualizacion}</td>
         <td>${btnEvidencia}</td>
         <td>${coords}</td>
       </tr>
@@ -490,10 +494,13 @@ function aplicarFiltros() {
 document.getElementById('btnExport').addEventListener('click', () => {
   if (!ALL_REGISTROS.length) return alert('No hay datos disponibles para exportar.');
 
-  const encabezados = ['Folio', 'Fecha', 'Brigadista', 'Colonia', 'Dirección', 'Referencia', 'Categoría', 'Descripción', 'Estado', 'Coordenadas GPS'];
+  const encabezados = ['Folio', 'Fecha', 'Brigadista', 'Colonia', 'Dirección', 'Referencia', 'Categoría', 'Descripción', 'Estado', 'Última Modificación', 'Coordenadas GPS'];
   const filas = ALL_REGISTROS.map(r => {
     const d = new Date(r.fechaCreacion);
     const folio = formatearFolio(r.id, r.fechaCreacion);
+    const dAct = r.fechaActualizacion ? new Date(r.fechaActualizacion) : null;
+    const txtAct = dAct ? `${dAct.toLocaleDateString('es-MX')} ${dAct.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}` : 'Sin cambios';
+
     return [
       folio,
       d.toLocaleDateString('es-MX'),
@@ -504,6 +511,7 @@ document.getElementById('btnExport').addEventListener('click', () => {
       `"${r.tipo || ''}"`,
       `"${(r.descripcion || '').replace(/"/g, '""')}"`,
       r.estado || 'pendiente',
+      `"${txtAct}"`,
       `"${r.lat || ''}, ${r.lng || ''}"`
     ].join(',');
   });
