@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<!-- Librería para generación de Excel nativo .xlsx sin advertencias -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Librería ExcelJS para tablas nativas .xlsx con bordes y sin colores -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -486,10 +486,28 @@ function aplicarFiltros() {
   renderTabla(filtrados);
 }
 
-document.getElementById('btnExport').addEventListener('click', () => {
+document.getElementById('btnExport').addEventListener('click', async () => {
   if (!ALL_REGISTROS.length) return alert('No hay datos disponibles para exportar.');
 
-  const datos = ALL_REGISTROS.map(r => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Reporte Global');
+
+  worksheet.columns = [
+    { header: 'Folio', key: 'folio', width: 18 },
+    { header: 'Fecha Registro', key: 'fechaReg', width: 22 },
+    { header: 'Fecha Ejecución (En proceso)', key: 'fechaIni', width: 26 },
+    { header: 'Fecha Concretado (Aplicado)', key: 'fechaFin', width: 26 },
+    { header: 'Brigadista', key: 'nombre', width: 22 },
+    { header: 'Colonia', key: 'colonia', width: 20 },
+    { header: 'Dirección', key: 'direccion', width: 28 },
+    { header: 'Referencia', key: 'referencia', width: 22 },
+    { header: 'Categoría', key: 'categoria', width: 18 },
+    { header: 'Descripción', key: 'descripcion', width: 32 },
+    { header: 'Estado', key: 'estado', width: 15 },
+    { header: 'Coordenadas GPS', key: 'coords', width: 22 }
+  ];
+
+  ALL_REGISTROS.forEach(r => {
     const d = new Date(r.fechaCreacion);
     const folio = formatearFolio(r.id, r.fechaCreacion);
     const fReg = `${d.toLocaleDateString('es-MX')} ${d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}`;
@@ -502,34 +520,59 @@ document.getElementById('btnExport').addEventListener('click', () => {
 
     const coords = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : 'Sin GPS';
 
-    return {
-      'Folio': folio,
-      'Fecha Registro': fReg,
-      'Fecha Ejecución (En proceso)': fIni,
-      'Fecha Concretado (Aplicado)': fFin,
-      'Brigadista': r.nombre || 'Sin nombre',
-      'Colonia': r.colonia || '',
-      'Dirección': r.direccion || '',
-      'Referencia': r.referencia || '',
-      'Categoría': r.tipo || '',
-      'Descripción': r.descripcion || '',
-      'Estado': (r.estado || 'pendiente').toUpperCase(),
-      'Coordenadas GPS': coords
+    worksheet.addRow({
+      folio: folio,
+      fechaReg: fReg,
+      fechaIni: fIni,
+      fechaFin: fFin,
+      nombre: r.nombre || 'Sin nombre',
+      colonia: r.colonia || '',
+      direccion: r.direccion || '',
+      referencia: r.referencia || '',
+      categoria: r.tipo || '',
+      descripcion: r.descripcion || '',
+      estado: (r.estado || 'pendiente').toUpperCase(),
+      coords: coords
+    });
+  });
+
+  const borderStyle = {
+    top: { style: 'thin', color: { argb: 'FF808080' } },
+    left: { style: 'thin', color: { argb: 'FF808080' } },
+    bottom: { style: 'thin', color: { argb: 'FF808080' } },
+    right: { style: 'thin', color: { argb: 'FF808080' } }
+  };
+
+  // Encabezados en negrita, sin color de fondo, bordes oscuros
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { name: 'Calibri', size: 11, bold: true };
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerRow.eachCell(cell => {
+    cell.border = {
+      top: { style: 'medium', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'medium', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } }
     };
   });
 
-  const ws = XLSX.utils.json_to_sheet(datos);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Reporte Global");
+  // Datos con bordes finos de estilo tabla, sin colores
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber > 1) {
+      row.font = { name: 'Calibri', size: 11 };
+      row.alignment = { vertical: 'middle', horizontal: 'left' };
+      row.eachCell(cell => {
+        cell.border = borderStyle;
+      });
+    }
+  });
 
-  // Ajuste inteligente de ancho de columnas
-  ws['!cols'] = [
-    { wch: 18 }, { wch: 20 }, { wch: 22 }, { wch: 22 },
-    { wch: 22 }, { wch: 20 }, { wch: 25 }, { wch: 20 },
-    { wch: 16 }, { wch: 30 }, { wch: 15 }, { wch: 22 }
-  ];
-
-  XLSX.writeFile(wb, `reporte_global_admin_pan_${new Date().toISOString().slice(0,10)}.xlsx`);
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `reporte_global_admin_pan_${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.click();
 });
 </script>
 </body>
