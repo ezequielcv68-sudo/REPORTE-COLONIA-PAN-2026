@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Librería para generación de Excel nativo .xlsx sin advertencias -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -277,7 +279,7 @@
       </div>
       <button class="btn-export" id="btnExport">
         <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        Descargar Excel Estilizado
+        Descargar Excel (.xlsx)
       </button>
     </div>
 
@@ -487,38 +489,7 @@ function aplicarFiltros() {
 document.getElementById('btnExport').addEventListener('click', () => {
   if (!ALL_REGISTROS.length) return alert('No hay datos disponibles para exportar.');
 
-  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-  <head>
-    <meta charset="UTF-8">
-    <style>
-      table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10pt; }
-      th { background-color: #002B7F; color: #FFFFFF; font-weight: bold; border: 1px solid #001B54; padding: 8px; text-align: center; }
-      td { border: 1px solid #CCCCCC; padding: 6px; text-align: left; vertical-align: middle; }
-      .bold { font-weight: bold; }
-      .center { text-align: center; }
-    </style>
-  </head>
-  <body>
-    <table>
-      <thead>
-        <tr>
-          <th>Folio</th>
-          <th>Fecha Registro</th>
-          <th>Fecha Ejecución (En proceso)</th>
-          <th>Fecha Concretado (Aplicado)</th>
-          <th>Brigadista</th>
-          <th>Colonia</th>
-          <th>Dirección</th>
-          <th>Referencia</th>
-          <th>Categoría</th>
-          <th>Descripción</th>
-          <th>Estado</th>
-          <th>Coordenadas GPS</th>
-        </tr>
-      </thead>
-      <tbody>`;
-
-  ALL_REGISTROS.forEach(r => {
+  const datos = ALL_REGISTROS.map(r => {
     const d = new Date(r.fechaCreacion);
     const folio = formatearFolio(r.id, r.fechaCreacion);
     const fReg = `${d.toLocaleDateString('es-MX')} ${d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}`;
@@ -531,29 +502,34 @@ document.getElementById('btnExport').addEventListener('click', () => {
 
     const coords = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : 'Sin GPS';
 
-    html += `<tr>
-      <td class="bold center">${folio}</td>
-      <td>${fReg}</td>
-      <td>${fIni}</td>
-      <td>${fFin}</td>
-      <td class="bold">${(r.nombre || 'Sin nombre').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
-      <td class="bold">${(r.colonia || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
-      <td>${(r.direccion || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
-      <td>${(r.referencia || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
-      <td>${r.tipo || ''}</td>
-      <td>${(r.descripcion || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
-      <td class="center bold">${(r.estado || 'pendiente').toUpperCase()}</td>
-      <td>${coords}</td>
-    </tr>`;
+    return {
+      'Folio': folio,
+      'Fecha Registro': fReg,
+      'Fecha Ejecución (En proceso)': fIni,
+      'Fecha Concretado (Aplicado)': fFin,
+      'Brigadista': r.nombre || 'Sin nombre',
+      'Colonia': r.colonia || '',
+      'Dirección': r.direccion || '',
+      'Referencia': r.referencia || '',
+      'Categoría': r.tipo || '',
+      'Descripción': r.descripcion || '',
+      'Estado': (r.estado || 'pendiente').toUpperCase(),
+      'Coordenadas GPS': coords
+    };
   });
 
-  html += `</tbody></table></body></html>`;
+  const ws = XLSX.utils.json_to_sheet(datos);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Reporte Global");
 
-  const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `reporte_global_admin_pan_${new Date().toISOString().slice(0,10)}.xls`;
-  a.click();
+  // Ajuste inteligente de ancho de columnas
+  ws['!cols'] = [
+    { wch: 18 }, { wch: 20 }, { wch: 22 }, { wch: 22 },
+    { wch: 22 }, { wch: 20 }, { wch: 25 }, { wch: 20 },
+    { wch: 16 }, { wch: 30 }, { wch: 15 }, { wch: 22 }
+  ];
+
+  XLSX.writeFile(wb, `reporte_global_admin_pan_${new Date().toISOString().slice(0,10)}.xlsx`);
 });
 </script>
 </body>
