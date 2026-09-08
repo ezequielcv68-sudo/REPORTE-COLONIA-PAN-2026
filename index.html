@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>MEJORAS EN TU COLONIA 2026 — Control de mejoras urbanas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -44,14 +44,24 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; min-height: 100%; width: 100%; overflow-x: hidden; }
+  
+  /* Ajuste de scroll táctil fluido para móviles */
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
   body {
     background: linear-gradient(135deg, #001A4D 0%, #002B7F 45%, #0052CC 85%, #00A3E0 100%);
     background-attachment: fixed;
     color: var(--paper);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
-    overscroll-behavior-y: none;
   }
 
   button { font-family: inherit; }
